@@ -2,11 +2,11 @@
 
 CC=gcc  #compiler
 CFLAGS=-g -Wall
-MAIN=main
+MAIN=dkt
 
 all: compile_main
 
 compile_main:
 	$(CC) main.c $(CFLAGS) -o $(MAIN)
 clean:
-	rm $(main)
+	rm $(MAIN)

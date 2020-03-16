@@ -3,6 +3,9 @@
 #include <ctype.h>
 #include <string.h>
 
+// melo TCP
+// goncalo UDP
+
 void read_arguments(int argc, char *argv[], int *port, char *ip);
 int validate_number(char *str);
 int validate_ip(char *ip);

@@ -1,8 +1,7 @@
 #Esta makefile faz tudo automáticamente, procura os sources e ainda faz a gestão das dependências. 
 #Basta meter todos os .c e .h numa pasta chamada "src", a MakeFile estará na parent directory do src.
-#Francisco Melo
 
-TARGET_EXEC ?=server
+TARGET_EXEC ?=dkt
 LDFLAGS =
 CFLAGS = -g -Wall -std=gnu11
 CC =gcc

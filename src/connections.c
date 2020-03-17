@@ -67,5 +67,34 @@ int set_udp_cli (char *ip, int port, struct sockaddr_in *addr) {
     addr->sin_port = htons(port); 
     addr->sin_addr.s_addr = inet_addr(ip);
 
+
     return sockfd;
+}
+
+int initTcpSocket(char* ip, int port){
+    struct sockaddr_in local_addr;
+	socklen_t size_addr = 0;
+    int server_fd;
+	
+	if((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){										//Verificar se não houve erro a criar a socket
+		perror("socket: ");
+		exit(-1);
+	}
+
+	local_addr.sin_family = AF_INET;
+    inet_pton(AF_INET, ip, &(local_addr.sin_addr));                         
+    local_addr.sin_port = htons(port); 
+
+	if(bind(server_fd, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0){					//Verificar se não houve erro a fazer bind
+		perror("bind");
+		exit(-1);
+	}
+	printf(" socket created and binded \n");
+
+	if(listen(server_fd, 2) == -1){																//Verificar se não houve erro a fazer listen
+		perror("listen");
+		exit(-1);
+	}
+
+	return server_fd;
 }

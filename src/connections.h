@@ -12,4 +12,6 @@
 
 int set_udp_cli (char *ip, int port, struct sockaddr_in *addr);
 
+int initTcpSocket(char* ip, int port);
+
 #endif

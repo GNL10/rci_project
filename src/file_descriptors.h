@@ -12,5 +12,14 @@
 #define SUCCESSOR_FD 3
 #define PREDECESSOR_FD 4
 
+typedef struct Fd_Node_Struct{
+    int fd;
+    struct Fd_Node_Struct* next;
+    struct Fd_Node_Struct* prev;
+}Fd_Node;
+
+Fd_Node* newNode(int fd);
+void deleteNode(Fd_Node* del_node);
+void delStack();
 
 #endif

@@ -29,7 +29,7 @@ $(BUILD_DIR)/%.c.o: %.c
 .PHONY: clean
 
 clean:
-	$(RM) -r $(BUILD_DIR)
+	$(RM) -r $(BUILD_DIR) $(TARGET_EXEC)
 
 -include $(DEPS)
 

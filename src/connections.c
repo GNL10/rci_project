@@ -21,7 +21,7 @@ int set_udp_server(char *ip, int port) {
       
     // Filling server information 
     servaddr.sin_family = AF_INET; // IPv4 
-    servaddr.sin_addr.s_addr = inet_addr("ip"); //INADDR_ANY accepts any address
+    servaddr.sin_addr.s_addr = inet_addr(ip); //INADDR_ANY accepts any address
     servaddr.sin_port = htons(port);
       
     // Bind the socket with the server address 
@@ -79,8 +79,6 @@ void udp_recv (int sockfd, char *ip, int port, char *message) {
     return;
 }
 
-
-
 int initTcpServer(char* ip, int port){
     struct sockaddr_in local_addr;
 	socklen_t size_addr = 0;
@@ -118,5 +116,4 @@ void listenHandler(){
         perror("accept");
         exit(-1);
 	}
-
 }

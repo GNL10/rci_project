@@ -17,10 +17,12 @@
 int fd_vec[NUM_FIXED_FD] = {0, 0, 0, 0, 0};
 int num_active_fd_vec = 0;
 const void (*func_ptr[3])() = {};
+Fd_Node* fd_stack = NULL;
+
 
 int main(int argc, char const *argv[]) {
 	int port;
-	char ip[16];
+	char ip[40];
 	char command[MAX_LINE];
 	int code = -1;
 	int max_numbered_fd;
@@ -50,8 +52,6 @@ int main(int argc, char const *argv[]) {
 		}
 		active_fd = pollFd(&rd_set);
 		func_ptr[active_fd]();
-		
-		
 	}
 
 

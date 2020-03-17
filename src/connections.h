@@ -16,6 +16,6 @@ int set_udp_server(char *ip, int port);
 int set_udp_cli (char *ip, int port);
 void udp_send (int sockfd, char *ip, int port, char *message);
 void udp_recv (int sockfd, char *ip, int port, char *message);
-int initTcpSocket(char* ip, int port);
+int initTcpServer(char* ip, int port);
 
 #endif

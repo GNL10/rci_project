@@ -1,6 +1,9 @@
 #include "connections.h"
+#include "file_descriptors.h"
 
 #define MAXLINE 1024 
+
+extern int fd_vec[NUM_FIXED_FD];
 
 // becomes ready to receive udp messages on sockfd
 int set_udp_server(char *ip, int port) {
@@ -78,7 +81,7 @@ void udp_recv (int sockfd, char *ip, int port, char *message) {
 
 
 
-int initTcpSocket(char* ip, int port){
+int initTcpServer(char* ip, int port){
     struct sockaddr_in local_addr;
 	socklen_t size_addr = 0;
     int server_fd;
@@ -104,4 +107,16 @@ int initTcpSocket(char* ip, int port){
 	}
 
 	return server_fd;
+}
+
+void listenHandler(){
+    int new_fd;
+    struct sockaddr_in new_addr;
+    socklen_t size_addr = 0;
+
+    if((new_fd = accept(fd_vec[LISTEN_FD], (struct sockaddr*)&new_addr, &size_addr)) == -1){	    //Verficiar se não houve erro a fazer accept
+        perror("accept");
+        exit(-1);
+	}
+
 }

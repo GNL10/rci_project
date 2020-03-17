@@ -15,6 +15,8 @@
 #include "file_descriptors.h"
 
 int fd_vec[NUM_FIXED_FD] = {0, 0, 0, 0, 0};
+int num_active_fd_vec = 0;
+const void (*func_ptr[3])() = {};
 
 int main(int argc, char const *argv[]) {
 	int port;
@@ -23,27 +25,32 @@ int main(int argc, char const *argv[]) {
 	int code = -1;
 	int max_numbered_fd;
 	char end_flag = 0;
-
+	int active_fd;
 	fd_set rd_set;			//read set
 
 	read_arguments(argc, (char**) argv, &port, ip);
 
 	FD_ZERO(&rd_set);									// clear the descriptor set
 
-	fd_vec[LISTEN_FD] = initTcpSocket(ip, port);		//Setup tcp socket
+	fd_vec[LISTEN_FD] = initTcpServer(ip, port);		//Setup tcp socket
+	fd_vec[UDP_FD] = set_udp_server(ip, port);
+
 	FD_SET(fd_vec[LISTEN_FD], &rd_set);					//set listen_fd in readset 
-	
+	FD_SET(fd_vec[UDP_FD], &rd_set);					//set udp_fd in readset
 	FD_SET(fd_vec[STDIN_FD], &rd_set);					//set stdin in readset
+	num_active_fd_vec = 3;
 
 
-	max_numbered_fd = maxValue(5, fd_vec[LISTEN_FD], 0, 0, 0, 0);			
+	max_numbered_fd = maxValue(3, fd_vec[LISTEN_FD], fd_vec[UDP_FD], fd_vec[STDIN_FD], 0, 0);			
 
 	while(!end_flag){
 		if(select(max_numbered_fd, &rd_set, NULL, NULL, NULL) == -1){
 			perror("select(): ");
 			exit(-1);
 		}
-
+		active_fd = pollFd(&rd_set);
+		func_ptr[active_fd]();
+		
 		
 	}
 

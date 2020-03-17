@@ -23,8 +23,6 @@ Fd_Node* fd_stack = NULL;
 int main(int argc, char const *argv[]) {
 	int port;
 	char ip[40];
-	char command[MAX_LINE];
-	int code = -1;
 	int max_numbered_fd;
 	char end_flag = 0;
 	int active_fd;
@@ -43,10 +41,12 @@ int main(int argc, char const *argv[]) {
 	num_active_fd_vec = 3;
 
 
+
 	max_numbered_fd = maxValue(3, fd_vec[LISTEN_FD], fd_vec[UDP_FD], fd_vec[STDIN_FD], 0, 0);			
 
 	while(!end_flag){
-		if(select(max_numbered_fd, &rd_set, NULL, NULL, NULL) == -1){
+
+		if(select(max_numbered_fd+1, &rd_set, NULL, NULL, NULL) == -1){
 			perror("select(): ");
 			exit(-1);
 		}

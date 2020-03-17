@@ -93,9 +93,9 @@ int read_command(char *command) {
         else if (!strcmp(command, "exit")) {
             return -2;
         }
-        else {
+        else {	// invalid command
             return -1;
         }
     }
-    return -1;
+    return -1;	// no command
 }

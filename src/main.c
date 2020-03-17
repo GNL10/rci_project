@@ -33,24 +33,26 @@ int main(int argc, char const *argv[]) {
 	fd_vec[LISTEN_FD] = initTcpServer(ip, port);		//Setup tcp socket
 	fd_vec[UDP_FD] = set_udp_server(ip, port);
 
-	FD_SET(fd_vec[LISTEN_FD], &rd_set);					//set listen_fd in readset 
-	FD_SET(fd_vec[UDP_FD], &rd_set);					//set udp_fd in readset
-	FD_SET(fd_vec[STDIN_FD], &rd_set);					//set stdin in readset
+	
 	num_active_fd_vec = 3;
 
 
 
-	max_numbered_fd = maxValue(3, fd_vec[LISTEN_FD], fd_vec[UDP_FD], fd_vec[STDIN_FD], 0, 0);			
+				
 
 	while(!end_flag){
-
+		FD_SET(fd_vec[LISTEN_FD], &rd_set);					//set listen_fd in readset 
+		FD_SET(fd_vec[UDP_FD], &rd_set);					//set udp_fd in readset
+		FD_SET(fd_vec[STDIN_FD], &rd_set);					//set stdin in readset
+		max_numbered_fd = maxValue(3, fd_vec[LISTEN_FD], fd_vec[UDP_FD], fd_vec[STDIN_FD], 0, 0);
+		
 		if(select(max_numbered_fd+1, &rd_set, NULL, NULL, NULL) == -1){
 			perror("select(): ");
 			exit(-1);
 		}
 		active_fd = pollFd(&rd_set);
 		func_ptr[active_fd]();
-		
+		printf("after func_ptr\n");
 		
 	}
 

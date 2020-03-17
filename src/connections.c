@@ -46,24 +46,6 @@ int set_udp_cli (char *ip, int port) {
     return sockfd;
 }
 
-/*void udp_send (int sockfd, char *ip, int port, char *message) {
-	struct sockaddr_in addr;
-	memset(&addr, 0, sizeof(addr)); 
-      
-
-    // Filling server information 
-    addr.sin_family = AF_INET; 
-    addr.sin_port = htons(port); 
-    addr.sin_addr.s_addr = inet_addr(ip);
-
-    sendto(sockfd, (const char *)message, strlen(message), 
-        MSG_CONFIRM, (const struct sockaddr *) &addr,  
-            sizeof(addr)); 
-    printf("UDP client sent message: %s\n", message);
-	return;
-}*/
-
-
 int initTcpServer(char* ip, int port){
     struct sockaddr_in local_addr;
 	socklen_t size_addr = 0;
@@ -101,5 +83,4 @@ void listenHandler(){
         perror("accept");
         exit(-1);
 	}
-
 }

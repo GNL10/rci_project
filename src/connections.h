@@ -12,4 +12,6 @@
 
 int set_udp_server();
 
+int initTcpSocket(char* ip, int port);
+
 #endif

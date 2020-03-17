@@ -7,5 +7,7 @@
 
 
 void entry (int key, char *boot, char *ip, int port);
+void stdinHandler();
+void udpHandler();
 int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port);
 #endif

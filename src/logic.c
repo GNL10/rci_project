@@ -1,6 +1,10 @@
 #include "logic.h"
 #include "connections.h"
 #include "io.h"
+#include "file_descriptors.h"
+
+extern int fd_vec[NUM_FIXED_FD];
+
 
 void entry (int key, char *boot, char *ip, int port) {
 	int sockfd;
@@ -12,11 +16,11 @@ void entry (int key, char *boot, char *ip, int port) {
 	
 	sockfd = set_udp_cli(ip, port);
 	// send EFND i
-    udp_send(sockfd, ip, port, message);
+    //udp_send(sockfd, ip, port, message);
 
     // recv EKEY
     // what if it does not receive a message ? !!!!!!!!!!!
-    udp_recv(sockfd, ip, port, buffer);
+    //udp_recv(sockfd, ip, port, buffer);
   	close(sockfd);
   	
   	// must analyse message
@@ -46,6 +50,32 @@ void entry (int key, char *boot, char *ip, int port) {
 
     // validate command and args
     
+}
+
+void stdinHandler() {
+    char command[MAX_LINE];
+    int code;
+
+    code = read_command(command);
+
+    printf("Inserted command was: %s\nCode: %d\n", command, code);
+}
+
+void udpHandler() {
+    char message[MAX_LINE];
+    struct sockaddr_in cli_addr;
+    int n;
+    socklen_t len;
+
+    memset(&cli_addr, 0, sizeof(cli_addr));
+    len = sizeof(cli_addr);
+
+    n = recvfrom(fd_vec[UDP_FD], (char *)message, BUFFER_SIZE, MSG_WAITALL, (struct sockaddr *) &cli_addr, &len); 
+    message[n] = '\0';
+    printf("UDP message was received: %s\n", message);
+    sendto(fd_vec[UDP_FD], (const char *)"THIS MESSAGE WAS SENT BY THE SERVER", strlen("THIS MESSAGE WAS SENT BY THE SERVER"), 
+        MSG_CONFIRM, (const struct sockaddr *) &cli_addr,  
+            sizeof(cli_addr)); 
 }
 
 int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port) {

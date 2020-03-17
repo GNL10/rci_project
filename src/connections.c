@@ -19,7 +19,7 @@ int set_udp_server() {
       
     // Filling server information 
     servaddr.sin_family = AF_INET; // IPv4 
-    servaddr.sin_addr.s_addr = INADDR_ANY; // accepts any address
+    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); //INADDR_ANY accepts any address
     servaddr.sin_port = htons(port);
       
     // Bind the socket with the server address 
@@ -51,25 +51,8 @@ int set_udp_server() {
     return sockfd; 
 }  
 
-/* EFND i
-    Sets up the udp client
-    sends EFND i message
-    waits to receive EKEY message
-*/
-void EFND (char *ip, int port, int i) {
+int set_udp_cli (char *ip, int port, struct sockaddr_in *addr) {
     int sockfd; 
-    char buffer[MAXLINE];
-    char *message;
-    struct sockaddr_in servaddr; 
-    char *command = "EFND";
-    
-    message = (char *) malloc((strlen(command) + i%10 + 1)*sizeof(char));
-    if (message == NULL) { 
-        printf("Memory not allocated.\n"); 
-        exit(0); 
-    }
-
-    sprintf(message, "%s %d", command, i);
     
     // Creating socket file descriptor 
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
@@ -77,25 +60,12 @@ void EFND (char *ip, int port, int i) {
         exit(EXIT_FAILURE); 
     } 
   
-    memset(&servaddr, 0, sizeof(servaddr)); 
+    memset(addr, 0, sizeof(*addr)); 
       
     // Filling server information 
-    servaddr.sin_family = AF_INET; 
-    servaddr.sin_port = htons(port); 
-    servaddr.sin_addr.s_addr = inet_addr(ip); 
+    addr->sin_family = AF_INET; 
+    addr->sin_port = htons(port); 
+    addr->sin_addr.s_addr = inet_addr(ip);
 
-    int n;
-    socklen_t len; 
-    
-    // send EFND i message 
-    sendto(sockfd, (const char *)message, strlen(message), 
-        MSG_CONFIRM, (const struct sockaddr *) &servaddr,  
-            sizeof(servaddr)); 
-    free(message);
-    
-    n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &servaddr, &len); 
-    buffer[n] = '\0'; 
-    printf("UDP client received: %s\n", buffer); 
-  	// must analyse message
-    close(sockfd);
+    return sockfd;
 }

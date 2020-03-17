@@ -65,3 +65,37 @@ int validate_port(int port) {
 	}
 	return 1;
 }
+
+int read_command(char *command) {
+	char buffer[MAX_LINE];
+
+    printf("Enter a command:\n");
+    fgets(buffer, sizeof(buffer),stdin);
+    if (sscanf(buffer, "%s", command) == 1) {
+        if (!strcmp(command, "new")) {
+            return 0;
+        }
+        else if (!strcmp(command, "entry")) {
+        	return 1;
+        }
+        else if (!strcmp(command, "sentry")) {
+            return 2;
+        }
+        else if (!strcmp(command, "leave")) {
+            return 3;
+        }
+        else if (!strcmp(command, "show")) {
+            return 4;
+        }
+        else if (!strcmp(command, "find")) {
+            return 5;
+        }
+        else if (!strcmp(command, "exit")) {
+            return -2;
+        }
+        else {
+            return -1;
+        }
+    }
+    return -1;
+}

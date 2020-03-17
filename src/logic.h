@@ -5,8 +5,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define BUFFERSIZE 1000
 
+#define BUFFER_SIZE 1000
 
+void entry (int key, char *boot, char *ip, int port);
 
 #endif

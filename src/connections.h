@@ -10,6 +10,6 @@
 #include <netinet/in.h> 
 #include <unistd.h> 
 
-int set_udp_server();
+int set_udp_cli (char *ip, int port, struct sockaddr_in *addr);
 
 #endif

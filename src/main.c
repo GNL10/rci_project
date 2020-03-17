@@ -18,6 +18,7 @@ int main(int argc, char const *argv[]) {
 
 	read_arguments(argc, (char**) argv, &port, ip);
 
+	
 	while (1) {
 		code = read_command(command);
 		switch (code) {

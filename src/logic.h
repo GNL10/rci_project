@@ -6,8 +6,6 @@
 #include <stdlib.h>
 
 
-#define BUFFER_SIZE 1000
-
 void entry (int key, char *boot, char *ip, int port);
-
+int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port);
 #endif

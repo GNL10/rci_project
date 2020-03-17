@@ -2,27 +2,37 @@
 #include "connections.h"
 
 void entry (int key, char *boot, char *ip, int port) {
-	struct sockaddr_in addr;
 	int sockfd;
 	char message[8];
     char *command = "EFND";
     char buffer[BUFFER_SIZE];
-    int n;
-    socklen_t len;
-
-	sockfd = set_udp_cli(ip, port, &addr);
+    
+	sockfd = set_udp_cli(ip, port);
+	
 	// send EFND
     sprintf(message, "%s %d", command, key);
-    sendto(sockfd, (const char *)message, strlen(message), 
-        MSG_CONFIRM, (const struct sockaddr *) &addr,  
-            sizeof(addr)); 
-    printf("UDP client sent message: %s\n", message);
+    udp_send(sockfd, ip, port, message);
 
     // recv EKEY
     // what if it does not receive a message ?
-    n = recvfrom(sockfd, (char *)buffer, BUFFER_SIZE, MSG_WAITALL, (struct sockaddr *) &addr, &len); 
-    buffer[n] = '\0'; 
-    printf("UDP client received message: %s\n", buffer); 
+    udp_recv(sockfd, ip, port, buffer);
   	// must analyse message
+   
+
+    int succ_key, succ_port;
+    char recv_command[BUFFER_SIZE], succ_name[BUFFER_SIZE], succ_ip[BUFFER_SIZE];
+
+    if (parse_command(buffer, recv_command, &succ_key, succ_name, succ_ip, &succ_port) == 0) {
+        printf("UDP message not valid: %s\n", buffer);
+        close(sockfd);
+        exit(0);
+    }
+    // validate command and args
     close(sockfd);
+}
+
+int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port) {
+    int n;
+    n = sscanf(str, "%s %d %s %s %d", command, key, name, ip, port);
+    return n;
 }

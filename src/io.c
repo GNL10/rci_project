@@ -37,9 +37,12 @@ int validate_number(char *str) {
 }
 
 // copied from the internet!
-int validate_ip(char *ip) { //check whether the IP is valid or not
+int validate_ip(char *ip_in) { //check whether the IP is valid or not
 	int num, dots = 0;
 	char *ptr;
+	char ip[MAX_LINE];
+
+	strcpy(ip, ip_in);
 	
 	if (ip == NULL)
 		return 0;
@@ -64,44 +67,67 @@ int validate_ip(char *ip) { //check whether the IP is valid or not
 
 int validate_port(int port) {
 	// TODO: ask teacher about the upper limit !!
-	if (port <= 1023 || port > 65535) {	// 2^16-1: 65535
+	if (port <= 1023 || port > 65535) // 2^16-1: 65535
 		return 0;
-	}
 	return 1;
 }
 
-int read_command(char *command) {
-	char buffer[MAX_LINE];
+int validate_key(int key) {
+	if (key < 0 || key > 16)
+		return 0;
+	return 1;
+}
 
-    printf("Enter a command:\n");
-    fgets(buffer, sizeof(buffer),stdin);
-    if (sscanf(buffer, "%s", command) == 1) {
-        if (!strcmp(command, "new")) {
-            return 0;
-        }
-        else if (!strcmp(command, "entry")) {
-        	return 1;
-        }
-        else if (!strcmp(command, "sentry")) {
-            return 2;
-        }
-        else if (!strcmp(command, "leave")) {
-            return 3;
-        }
-        else if (!strcmp(command, "show")) {
-            return 4;
-        }
-        else if (!strcmp(command, "find")) {
-            return 5;
-        }
-        else if (!strcmp(command, "exit")) {
-            return -2;
-        }
-        else {	// invalid command
-            return -1;
-        }
+void parse_and_validate (char *buffer, int n, char *cmd_in, int *key, char *name, char *ip, int *port) {
+    char cmd[MAX_LINE];
+
+    if (parse_command(buffer, cmd, key, name, ip, port) != n+1) {
+        printf("Message not valid: %s\n", buffer);
+        exit(0);
     }
-    return -1;	// no command
+    if (strcmp(cmd, cmd_in)) {
+        printf("Wrong command. UDP connection was expecting EKEY\n");
+        printf("Received instead %s\n", buffer);
+        exit(0);
+    }
+    if(!validate_ip(ip)) {
+        printf("ERROR: IP ADDRESS IS NOT VALID!\n");
+        exit(0);
+    }
+    if(!validate_port(*port)) {
+        printf("ERROR: PORT IS NOT VALID!\n");
+        exit(0);
+    }
+    if(!validate_key(*key)) {
+        printf("ERROR: KEY IS NOT VALID\n");
+        exit(0);
+    }
+}
+
+void read_command_line(char *command_line) {
+    fgets(command_line, MAX_LINE,stdin);
+}
+int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port) {
+    return sscanf(str, "%s %d %s %s %d", command, key, name, ip, port);
+}
+
+int get_command_code(char * command){
+	if (!strcmp(command, "new"))
+		return 0;
+	else if (!strcmp(command, "entry"))
+		return 1;
+	else if (!strcmp(command, "sentry"))
+		return 2;
+	else if (!strcmp(command, "leave"))
+		return 3;
+	else if (!strcmp(command, "show"))
+		return 4;
+	else if (!strcmp(command, "find"))
+		return 5;
+	else if (!strcmp(command, "exit"))
+		return -2;
+	else 	// invalid command
+		return -1;
 }
 
 int pollFd(fd_set* _rd_set){
@@ -112,5 +138,5 @@ int pollFd(fd_set* _rd_set){
 			return i;
 		}
 	}
-	
+	return 0;
 }

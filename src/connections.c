@@ -35,7 +35,7 @@ int set_udp_server(char *ip, int port) {
     return sockfd; 
 }  
 
-int set_udp_cli (char *ip, int port) {
+int set_udp_cli (char *ip, int port, struct sockaddr_in *serv_addr) {
     int sockfd; 
     
     // Creating socket file descriptor 
@@ -43,12 +43,32 @@ int set_udp_cli (char *ip, int port) {
         perror("socket creation failed"); 
         exit(EXIT_FAILURE); 
     } 
+
+    serv_addr->sin_family = AF_INET; 
+    serv_addr->sin_port = htons(port); 
+    serv_addr->sin_addr.s_addr = inet_addr(ip);
+
     return sockfd;
+}
+
+void udp_send (int sockfd, char *message, struct sockaddr* addr) {
+    sendto(sockfd, (const char *)message, strlen(message), 
+        MSG_CONFIRM, (const struct sockaddr *) addr,  
+            sizeof(*addr));
+}
+
+int udp_recv (int sockfd, char *message, struct sockaddr* addr) {
+    int n;
+    socklen_t len;
+
+    n = recvfrom(sockfd, (char *)message, MAXLINE,  
+                MSG_WAITALL, (struct sockaddr *) &addr, 
+                &len); 
+    return n;
 }
 
 int initTcpServer(char* ip, int port){
     struct sockaddr_in local_addr;
-	socklen_t size_addr = 0;
     int server_fd;
 	
 	if((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){										//Verificar se não houve erro a criar a socket

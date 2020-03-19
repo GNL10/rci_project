@@ -14,6 +14,8 @@
 #include "utils.h"
 #include "file_descriptors.h"
 
+// Quando um processo esta a tentar entrar no anel e dps a msg que recebe esta errada, ele deve sair do processo ou voltar ao menu?
+
 int fd_vec[NUM_FIXED_FD] = {0, 0, 0, 0, 0};
 int num_active_fd_vec = 0;
 const void (*func_ptr[3])() = {NULL, udpHandler, stdinHandler};
@@ -37,6 +39,7 @@ int main(int argc, char const *argv[]) {
 
 
 	while(!end_flag){
+		printf("Enter a command:\n");
 		FD_SET(fd_vec[LISTEN_FD], &rd_set);					//set listen_fd in readset 
 		FD_SET(fd_vec[UDP_FD], &rd_set);					//set udp_fd in readset
 		FD_SET(fd_vec[STDIN_FD], &rd_set);					//set stdin in readset

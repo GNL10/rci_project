@@ -52,10 +52,23 @@ void fdDeleteStack(void){
     fd_stack = NULL;
 }
 
+//Deletes the node which has del_fd fd
+void fdDeleteFd(int del_fd){
+    Fd_Node* aux;
+
+    for(aux = fd_stack; aux != NULL; aux = aux->next){
+        if(aux->fd == del_fd){
+            fdDeleteNode(aux);
+            return;
+        }
+    }   
+}
+
 //FD_SET All active file descriptors/sockets
 void fdSetAllSelect(fd_set* rd_set){
     Fd_Node* aux;
 
+    FD_ZERO(rd_set);									// clear the descriptor set
     for(aux = fd_stack; aux != NULL; aux = aux->next){
         FD_SET(aux->fd, rd_set);
     }
@@ -66,7 +79,7 @@ int fdMaxFdValue(void){
     Fd_Node* aux;
     int max = 0;
 
-    //Determinar o número max do vetor
+    //Determinar o fd max do stack fd
     for(aux = fd_stack; aux != NULL; aux = aux->next){
         max = MAX(max, aux->fd);
     }

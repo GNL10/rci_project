@@ -6,9 +6,10 @@
 #include <stdlib.h>
 
 
-
-void stdinHandler();
 void entry (int key, char *name, char *ip, int port);
-void udpHandler();
-
+int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port);
+void stdinHandler(void);
+void udpHandler(void);
+void tcpHandler(int sock_fd);
+void listenHandler(void);
 #endif

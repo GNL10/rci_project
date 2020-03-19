@@ -23,6 +23,7 @@ typedef struct Fd_Node_Struct{
 void fdInsertNode(int fd);
 void fdDeleteNode(Fd_Node* del_node);
 void fdDeleteStack(void);
+void fdDeleteFd(int del_fd);
 void fdSetAllSelect(fd_set* rd_set);
 int fdMaxFdValue(void);
 int fdPollFd(fd_set* _rd_set);

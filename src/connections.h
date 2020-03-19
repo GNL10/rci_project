@@ -12,8 +12,11 @@
 
 #define BUFFER_SIZE 1024
 
+#define TCP_RCV_SIZE 128
+
 int set_udp_server(char *ip, int port);
 int set_udp_cli (char *ip, int port);
 int initTcpServer(char* ip, int port);
+void forwardHandler(int active_fd);
 
 #endif

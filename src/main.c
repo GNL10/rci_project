@@ -15,11 +15,10 @@
 #include "file_descriptors.h"
 
 int fd_vec[NUM_FIXED_FD] = {0, 0, 0, 0, 0};
-const void (*func_ptr[3])() = {NULL, udpHandler, stdinHandler};
 Fd_Node* fd_stack = NULL;
 
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char const *argv[]){
 	int port;
 	char ip[40];
 	int max_numbered_fd;
@@ -47,7 +46,7 @@ int main(int argc, char const *argv[]) {
 			exit(-1);
 		}
 		active_fd = fdPollFd(&rd_set);
-		func_ptr[active_fd]();
+		forwardHandler(active_fd);
 	}
 
 

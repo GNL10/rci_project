@@ -1,5 +1,6 @@
 #include "connections.h"
 #include "file_descriptors.h"
+#include "logic.h"
 
 #define MAXLINE 1024 
 
@@ -71,4 +72,18 @@ int initTcpServer(char* ip, int port){
 	}
 
 	return server_fd;
+}
+
+void forwardHandler(int active_fd){
+
+    if(active_fd == fd_vec[LISTEN_FD]){
+        listenHandler();
+    }else if(active_fd == fd_vec[UDP_FD]){
+        udpHandler();
+    }else if(active_fd == fd_vec[STDIN_FD]){
+        stdinHandler();
+    }else{              //Generic TCP incoming message
+        tcpHandler(active_fd);
+    }
+    
 }

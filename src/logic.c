@@ -51,7 +51,7 @@ void entry (int key, char *boot, char *ip, int port) {
     
 }
 
-void stdinHandler() {
+void stdinHandler(void) {
     char command[MAX_LINE];
     int code;
 
@@ -64,7 +64,7 @@ int parse_command (char *str, char *command, int *key,  char *name, char *ip, in
     return sscanf(str, "%s %d %s %s %d", command, key, name, ip, port);
 }
 
-void udpHandler() {
+void udpHandler(void) {
     char message[MAX_LINE];
     struct sockaddr_in cli_addr;
     int n;
@@ -81,7 +81,18 @@ void udpHandler() {
             sizeof(cli_addr)); 
 }
 
-void listenHandler(){
+void tcpHandler(int sock_fd){
+    char buff[TCP_RCV_SIZE];
+
+    if(read(sock_fd, buff, sizeof(buff)) < 0){
+        printf("Client %d disconnected\n", sock_fd);
+        fdDeleteFd(sock_fd);
+        return;
+    }
+
+}
+
+void listenHandler(void){
     int new_fd;
     struct sockaddr_in new_addr;
     socklen_t size_addr = 0;

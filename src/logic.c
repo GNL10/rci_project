@@ -5,7 +5,6 @@
 
 extern int fd_vec[NUM_FIXED_FD];
 
-
 void entry (int key, char *boot, char *ip, int port) {
 	int sockfd;
 	char message[8];
@@ -61,6 +60,10 @@ void stdinHandler() {
     printf("Inserted command was: %s\nCode: %d\n", command, code);
 }
 
+int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port) {
+    return sscanf(str, "%s %d %s %s %d", command, key, name, ip, port);
+}
+
 void udpHandler() {
     char message[MAX_LINE];
     struct sockaddr_in cli_addr;
@@ -78,7 +81,14 @@ void udpHandler() {
             sizeof(cli_addr)); 
 }
 
-int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port) {
-    return sscanf(str, "%s %d %s %s %d", command, key, name, ip, port);
-}
+void listenHandler(){
+    int new_fd;
+    struct sockaddr_in new_addr;
+    socklen_t size_addr = 0;
 
+    if((new_fd = accept(fd_vec[LISTEN_FD], (struct sockaddr*)&new_addr, &size_addr)) == -1){	    //Verficiar se não houve erro a fazer accept
+        perror("accept");
+        exit(-1);
+	}
+    fdInsertNode(new_fd);
+}

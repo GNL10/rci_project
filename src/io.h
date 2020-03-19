@@ -14,6 +14,5 @@ int validate_number(char *str);
 int validate_ip(char *ip);
 int validate_port(int port);
 int read_command(char *command);
-int pollFd(fd_set* _rd_set);
 
 #endif

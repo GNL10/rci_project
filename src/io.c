@@ -2,7 +2,6 @@
 #include "file_descriptors.h"
 
 extern int fd_vec[NUM_FIXED_FD];
-extern int num_active_fd_vec;
 
 void read_arguments(int argc, char *argv[], int *port, char *ip) {
 
@@ -104,13 +103,3 @@ int read_command(char *command) {
     return -1;	// no command
 }
 
-int pollFd(fd_set* _rd_set){
-	int i;
-
-	for(i = 0; i < num_active_fd_vec; i++){
-		if(FD_ISSET(fd_vec[i], _rd_set)){
-			return i;
-		}
-	}
-	
-}

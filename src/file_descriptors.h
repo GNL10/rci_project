@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/select.h>
+
 
 #define NUM_FIXED_FD 5
 
@@ -18,8 +20,12 @@ typedef struct Fd_Node_Struct{
     struct Fd_Node_Struct* prev;
 }Fd_Node;
 
-Fd_Node* newNode(int fd);
-void deleteNode(Fd_Node* del_node);
-void delStack();
+void fdInsertNode(int fd);
+void fdDeleteNode(Fd_Node* del_node);
+void fdDeleteStack(void);
+void fdSetAllSelect(fd_set* rd_set);
+int fdMaxFdValue(void);
+int fdPollFd(fd_set* _rd_set);
+
 
 #endif

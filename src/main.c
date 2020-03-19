@@ -17,7 +17,6 @@
 // Quando um processo esta a tentar entrar no anel e dps a msg que recebe esta errada, ele deve sair do processo ou voltar ao menu?
 
 int fd_vec[NUM_FIXED_FD] = {0, 0, 0, 0, 0};
-int num_active_fd_vec = 0;
 const void (*func_ptr[3])() = {NULL, udpHandler, stdinHandler};
 Fd_Node* fd_stack = NULL;
 
@@ -34,22 +33,25 @@ int main(int argc, char const *argv[]) {
 
 	FD_ZERO(&rd_set);									// clear the descriptor set
 
-	fd_vec[LISTEN_FD] = initTcpServer(ip, port);		//Setup tcp socket
-	fd_vec[UDP_FD] = set_udp_server(ip, port);
+	fd_vec[LISTEN_FD] = initTcpServer(ip, port);		//Setup tcp server
+	fd_vec[UDP_FD] = set_udp_server(ip, port);			//Setup udp server
 
+	//Insert current active sockets into fd stack
+	fdInsertNode(fd_vec[LISTEN_FD]);
+	fdInsertNode(fd_vec[UDP_FD]);
+	fdInsertNode(fd_vec[STDIN_FD]);
 
 	while(!end_flag){
-		printf("Enter a command:\n");
-		FD_SET(fd_vec[LISTEN_FD], &rd_set);					//set listen_fd in readset 
-		FD_SET(fd_vec[UDP_FD], &rd_set);					//set udp_fd in readset
-		FD_SET(fd_vec[STDIN_FD], &rd_set);					//set stdin in readset
-		max_numbered_fd = maxValue(3, fd_vec[LISTEN_FD], fd_vec[UDP_FD], fd_vec[STDIN_FD], 0, 0);
-		num_active_fd_vec = 3;
+
+		fdSetAllSelect(&rd_set);
+		max_numbered_fd = fdMaxFdValue();
 		if(select(max_numbered_fd+1, &rd_set, NULL, NULL, NULL) == -1){
 			perror("select(): ");
 			exit(-1);
 		}
-		active_fd = pollFd(&rd_set);
+
+		active_fd = fdPollFd(&rd_set);
+		printf("main\n");
 		func_ptr[active_fd]();
 	}
 

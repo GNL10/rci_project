@@ -5,11 +5,12 @@
 
 extern int fd_vec[NUM_FIXED_FD];
 
+
 void stdinHandler() {
     char command_line[MAX_LINE];
     int key, port, args_num;
     char name[MAX_LINE], ip[MAX_LINE], command[MAX_LINE];
-    
+    printf("stdinHandler\n");
     read_command_line(command_line);
     args_num = parse_command(command_line, command, &key, name,  ip, &port);
     switch(get_command_code(command)) {
@@ -97,5 +98,14 @@ void udpHandler() {
             sizeof(cli_addr)); 
 }
 
+void listenHandler(){
+    int new_fd;
+    struct sockaddr_in new_addr;
+    socklen_t size_addr = 0;
 
-
+    if((new_fd = accept(fd_vec[LISTEN_FD], (struct sockaddr*)&new_addr, &size_addr)) == -1){	    //Verficiar se não houve erro a fazer accept
+        perror("accept");
+        exit(-1);
+	}
+    fdInsertNode(new_fd);
+}

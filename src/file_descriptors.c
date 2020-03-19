@@ -2,7 +2,10 @@
 
 extern Fd_Node* fd_stack;
 
-Fd_Node* newNode(int fd){
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+
+//Inserts a new node in the head of the fd stack
+void fdInsertNode(int fd){
     Fd_Node* new_node = NULL;
 
     new_node = (Fd_Node*)malloc(sizeof(Fd_Node));
@@ -18,29 +21,27 @@ Fd_Node* newNode(int fd){
     fd_stack = new_node;
 }
 
-void deleteNode(Fd_Node* del_node){
-    Fd_Node* prev;
+//Deletes the del_node in fd stack
+void fdDeleteNode(Fd_Node* del_node){
 
-    prev = del_node->prev;
-
-   
-    if(del_node == fd_stack){               //Se for a head
+    if(del_node == fd_stack){                   //Se for a head
+        if(fd_stack->next != NULL){             //Se for a head e se não for o único elemento da lista
+            fd_stack->next->prev = NULL;
+        }
         fd_stack = del_node->next;
-        if(fd_stack->prev != NULL){         //Se for a head e se não for o único elemento da lista
-            fd_stack->prev = NULL;
-        }
-    }else if(del_node->next != NULL){       //Se for no meio da lista ou na cauda
-        prev->next = fd_stack->next;
-        if(fd_stack->next != NULL){         //Se não for a cauda
-            fd_stack->next->prev = prev;
-        }
+    }else if(del_node->next != NULL){           //Se for no meio da lista
+        del_node->prev->next = del_node->next;
+        del_node->next->prev = del_node->prev;
+    }else if(del_node->next == NULL){           //Se for a cauda
+        del_node->prev->next = NULL;
     }
 
     free(del_node);
 
 }
 
-void delStack(){
+//Deletes the fd stack
+void fdDeleteStack(void){
     Fd_Node* aux;
     Fd_Node* next;
 
@@ -48,4 +49,38 @@ void delStack(){
         next = aux->next;
         free(aux);
     }
+    fd_stack = NULL;
+}
+
+//FD_SET All active file descriptors/sockets
+void fdSetAllSelect(fd_set* rd_set){
+    Fd_Node* aux;
+
+    for(aux = fd_stack; aux != NULL; aux = aux->next){
+        FD_SET(aux->fd, rd_set);
+    }
+}
+
+//Returns the max-valued fd of all nodes in fd stack
+int fdMaxFdValue(void){
+    Fd_Node* aux;
+    int max = 0;
+
+    //Determinar o número max do vetor
+    for(aux = fd_stack; aux != NULL; aux = aux->next){
+        max = MAX(max, aux->fd);
+    }
+    return max;
+}
+
+int fdPollFd(fd_set* _rd_set){
+	Fd_Node* aux;
+
+	for(aux = fd_stack; aux != NULL; aux = aux->next){
+		if(FD_ISSET(aux->fd, _rd_set)){
+			return aux->fd;
+		}
+	}
+	fprintf(stderr, "No fd active");
+	return -1;
 }

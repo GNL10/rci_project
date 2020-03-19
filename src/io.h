@@ -22,4 +22,5 @@ int parse_command (char *str, char *command, int *key,  char *name, char *ip, in
 int get_command_code(char * command);
 int pollFd(fd_set* _rd_set);
 
+
 #endif

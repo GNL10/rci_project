@@ -41,7 +41,7 @@ int main(int argc, char const *argv[]){
 	fdInsertNode(fd_vec[STDIN_FD]);
 
 	while(!end_flag){
-
+		printf("Enter a command:\n");
 		fdSetAllSelect(&rd_set);
 		max_numbered_fd = fdMaxFdValue();
 		if(select(max_numbered_fd+1, &rd_set, NULL, NULL, NULL) == -1){
@@ -50,7 +50,7 @@ int main(int argc, char const *argv[]){
 		}
 
 		active_fd = fdPollFd(&rd_set);
-		printf("main\n");
+		
 		forwardHandler(active_fd);
 	}
 

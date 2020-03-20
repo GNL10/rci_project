@@ -1,3 +1,5 @@
+#include <arpa/inet.h>
+
 #include "io.h"
 #include "file_descriptors.h"
 
@@ -39,7 +41,7 @@ int validate_number(char *str) {
 int validate_ip(char *ip_in) { //check whether the IP is valid or not
 	int num, dots = 0;
 	char *ptr;
-	char ip[MAX_LINE];
+	char ip[INET6_ADDRSTRLEN];
 
 	strcpy(ip, ip_in);
 	
@@ -78,7 +80,7 @@ int validate_key(int key) {
 }
 
 int parse_and_validate (char *buffer, char *cmd_in, int *key, char *name, char *ip, int *port) {
-    char cmd[MAX_LINE];
+    char cmd[BUFFER_SIZE];
 	int n_args;
 
     n_args = parse_command(buffer, cmd, key, name, ip, port);
@@ -103,7 +105,7 @@ int parse_and_validate (char *buffer, char *cmd_in, int *key, char *name, char *
 }
 
 void read_command_line(char *command_line) {
-    fgets(command_line, MAX_LINE,stdin);
+    fgets(command_line, BUFFER_SIZE,stdin);
 }
 int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port) {
     return sscanf(str, "%s %d %s %s %d", command, key, name, ip, port);

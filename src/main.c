@@ -19,10 +19,9 @@
 int fd_vec[NUM_FIXED_FD] = {0, 0, 0, 0, 0};
 Fd_Node* fd_stack = NULL;
 
-
 int main(int argc, char const *argv[]){
 	int port;
-	char ip[40];
+	char ip[INET6_ADDRSTRLEN];
 	int max_numbered_fd;
 	char end_flag = 0;
 	int active_fd;

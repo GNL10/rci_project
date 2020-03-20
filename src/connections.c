@@ -2,7 +2,6 @@
 #include "file_descriptors.h"
 #include "logic.h"
 
-#define MAXLINE 1024 
 
 extern int fd_vec[NUM_FIXED_FD];
 
@@ -37,7 +36,7 @@ int set_udp_server(char *ip, int port) {
 }  
 
 int set_udp_cli (char *ip, int port, struct sockaddr_in *serv_addr) {
-    int sockfd; 
+    int sockfd;
     
     // Creating socket file descriptor 
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
@@ -62,7 +61,7 @@ int udp_recv (int sockfd, char *message, struct sockaddr* addr) {
     int n;
     socklen_t len;
 
-    n = recvfrom(sockfd, (char *)message, MAXLINE,  
+    n = recvfrom(sockfd, (char *)message, UPD_RCV_SIZE,  
                 MSG_WAITALL, (struct sockaddr *) &addr, 
                 &len); 
     return n;

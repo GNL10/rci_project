@@ -7,12 +7,12 @@ extern int fd_vec[NUM_FIXED_FD];
 
 
 void stdinHandler() {
-    char command_line[MAX_LINE];
+    char command_line[BUFFER_SIZE];
     int key, port, args_num;
-    char name[MAX_LINE], ip[MAX_LINE], command[MAX_LINE];
+    char name[PARAMETER_SIZE], ip[INET6_ADDRSTRLEN], command[PARAMETER_SIZE];
 
     read_command_line(command_line);
-    args_num = parse_and_validate(command_line, command, &key, name,  ip, &port);
+    args_num = parse_command(command_line, command, &key, name,  ip, &port);
     switch(get_command_code(command)) {
         case 0:     // new
             if (args_num == 1+1)
@@ -60,7 +60,7 @@ void stdinHandler() {
 void entry (int key, char *name, char *ip, int port) {
     int sockfd, s_key, s_port;
     char message[8];
-    char buffer[BUFFER_SIZE], s_name[MAX_LINE], s_ip[MAX_LINE];
+    char buffer[BUFFER_SIZE], s_name[PARAMETER_SIZE], s_ip[INET6_ADDRSTRLEN];
     struct sockaddr_in serv_addr;
 
     sprintf(message, "%s %d", "EFND", key);
@@ -87,7 +87,7 @@ void entry (int key, char *name, char *ip, int port) {
 }
 
 void udpHandler(void) {
-    char message[MAX_LINE];
+    char message[UPD_RCV_SIZE];
     struct sockaddr_in cli_addr;
     int n;
     socklen_t len;
@@ -106,14 +106,14 @@ void udpHandler(void) {
 void tcpHandler(int sock_fd){
     char buff[TCP_RCV_SIZE];
     int args_num, key, port;
-    char ip[MAX_LINE], name[MAX_LINE], command[MAX_LINE];
+    char ip[INET6_ADDRSTRLEN], name[PARAMETER_SIZE], command[PARAMETER_SIZE];
 
     if(read(sock_fd, buff, sizeof(buff)) < 0){
         printf("Client %d disconnected\n", sock_fd);
         fdDeleteFd(sock_fd);
         return;
     }
-    args_num = parse_and_validate(buff, command, &key, name,  ip, &port);
+    args_num = parse_command(buff, command, &key, name,  ip, &port);
 
     switch(get_TCP_code(command)) {
         case 0:     // FND

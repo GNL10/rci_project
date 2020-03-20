@@ -10,8 +10,7 @@
 #include <netinet/in.h> 
 #include <unistd.h> 
 
-#define BUFFER_SIZE 1024
-
+#define UPD_RCV_SIZE 1024
 #define TCP_RCV_SIZE 128
 
 int set_udp_server(char *ip, int port);

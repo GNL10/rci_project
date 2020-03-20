@@ -7,7 +7,8 @@
 #include <string.h>
 #include <sys/select.h>
 
-#define MAX_LINE 1024
+#define BUFFER_SIZE 1024
+#define PARAMETER_SIZE 64
 #define IP_SIZE 128
 
 void read_arguments(int argc, char *argv[], int *port, char *ip);

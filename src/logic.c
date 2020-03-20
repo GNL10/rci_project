@@ -10,9 +10,9 @@ void stdinHandler() {
     char command_line[MAX_LINE];
     int key, port, args_num;
     char name[MAX_LINE], ip[MAX_LINE], command[MAX_LINE];
-    printf("stdinHandler\n");
+
     read_command_line(command_line);
-    args_num = parse_command(command_line, command, &key, name,  ip, &port);
+    args_num = parse_and_validate(command_line, command, &key, name,  ip, &port);
     switch(get_command_code(command)) {
         case 0:     // new
             if (args_num == 1+1)
@@ -76,9 +76,14 @@ void entry (int key, char *name, char *ip, int port) {
     close(sockfd);
     
     // must analyse message
-    parse_and_validate(buffer, 4, "EKEY", &s_key, s_name, s_ip, &s_port);
-    printf("Success. Read parameters: key: %d | name: %s | ip: %s | port %d\n", s_key, s_name, s_ip, s_port);
-    printf("Must now make a tcp connection\n");
+    if (parse_and_validate(buffer, "EKEY", &s_key, s_name, s_ip, &s_port) == 4 +1 ) {
+        printf("Success. Read parameters: key: %d | name: %s | ip: %s | port %d\n", s_key, s_name, s_ip, s_port);
+        printf("Must now make a tcp connection\n");
+    }
+    else {
+        printf("Received wrong udp message\n");
+    }
+    
 }
 
 void udpHandler(void) {
@@ -100,13 +105,66 @@ void udpHandler(void) {
 
 void tcpHandler(int sock_fd){
     char buff[TCP_RCV_SIZE];
+    int args_num, key, port;
+    char ip[MAX_LINE], name[MAX_LINE], command[MAX_LINE];
 
     if(read(sock_fd, buff, sizeof(buff)) < 0){
         printf("Client %d disconnected\n", sock_fd);
         fdDeleteFd(sock_fd);
         return;
     }
+    args_num = parse_and_validate(buff, command, &key, name,  ip, &port);
 
+    switch(get_TCP_code(command)) {
+        case 0:     // FND
+            if (args_num == 1+4)
+                printf("FND FUNCTION TO BE DEFINED\n");
+            else
+                printf("ERROR: FND needs 4 arguments\n");
+            break;
+        case 1:     // KEY
+            if (args_num == 1+4)
+                printf("KEY FUNCTION TO BE DEFINED\n");
+            else
+                printf("ERROR: KEY needs 4 arguments\n");
+            break;
+        case 2:     // SUCCONF
+            if (args_num == 1)
+                printf("SUCCONF FUNCTION TO BE DEFINED\n");
+            else
+                printf("ERROR: SUCCONF needs 0 arguments\n");
+            break;
+        case 3:     // SUCC
+            if (args_num == 1 + 4)
+                printf("SUCC FUNCTION TO BE DEFINED\n");
+            else
+                printf("ERROR: SUCC needs 4 arguments\n");
+             break;
+        case 4:     // NEW
+            if (args_num == 1 + 4)
+                printf("NEW FUNCTION TO BE DEFINED\n");
+            else
+                printf("ERROR: NEW needs 4 arguments\n");
+             break;
+        default :   // incorrect command
+            printf("TCP command not recognized. Ignoring...\n");
+            break; 
+    }
+}
+
+int get_TCP_code (char *command) {
+	if (!strcmp(command, "FND"))
+		return 0;
+	else if (!strcmp(command, "KEY"))
+		return 1;
+	else if (!strcmp(command, "SUCCONF"))
+		return 2;
+	else if (!strcmp(command, "SUCC"))
+		return 3;
+	else if (!strcmp(command, "NEW"))
+		return 4;
+	else 	// invalid command
+		return -1;
 }
 
 void listenHandler(void){

@@ -77,13 +77,11 @@ int validate_key(int key) {
 	return 1;
 }
 
-void parse_and_validate (char *buffer, int n, char *cmd_in, int *key, char *name, char *ip, int *port) {
+int parse_and_validate (char *buffer, char *cmd_in, int *key, char *name, char *ip, int *port) {
     char cmd[MAX_LINE];
+	int n_args;
 
-    if (parse_command(buffer, cmd, key, name, ip, port) != n+1) {
-        printf("Message not valid: %s\n", buffer);
-        exit(0);
-    }
+    n_args = parse_command(buffer, cmd, key, name, ip, port);
     if (strcmp(cmd, cmd_in)) {
         printf("Wrong command. UDP connection was expecting EKEY\n");
         printf("Received instead %s\n", buffer);
@@ -101,6 +99,7 @@ void parse_and_validate (char *buffer, int n, char *cmd_in, int *key, char *name
         printf("ERROR: KEY IS NOT VALID\n");
         exit(0);
     }
+	return n_args;
 }
 
 void read_command_line(char *command_line) {

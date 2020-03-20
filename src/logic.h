@@ -11,5 +11,6 @@ int parse_command (char *str, char *command, int *key,  char *name, char *ip, in
 void stdinHandler(void);
 void udpHandler(void);
 void tcpHandler(int sock_fd);
+int get_TCP_code (char *command);
 void listenHandler(void);
 #endif

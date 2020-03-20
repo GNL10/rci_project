@@ -8,6 +8,7 @@
 #include <sys/select.h>
 
 #define MAX_LINE 1024
+#define IP_SIZE 128
 
 void read_arguments(int argc, char *argv[], int *port, char *ip);
 
@@ -15,7 +16,7 @@ int validate_number(char *str);
 int validate_ip(char *ip);
 int validate_port(int port);
 int validate_key(int key);
-void parse_and_validate (char *buffer, int n, char *cmd_in, int *key, char *name, char *ip, int *port);
+int parse_and_validate (char *buffer, char *cmd_in, int *key, char *name, char *ip, int *port);
 
 void read_command_line(char *command_line);
 int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port);

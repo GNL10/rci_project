@@ -21,4 +21,10 @@ int udp_recv (int sockfd, char *message, struct sockaddr* addr);
 int initTcpServer(char* ip, int port);
 void forwardHandler(int active_fd);
 
+void stdinHandler(void);
+void udpHandler(void);
+void tcpHandler(int sock_fd);
+int get_TCP_code (char *command);
+void listenHandler(void);
+
 #endif

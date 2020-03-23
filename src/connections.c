@@ -183,7 +183,7 @@ void tcpHandler(int sock_fd){
     char ip[INET6_ADDRSTRLEN], name[PARAMETER_SIZE], command[PARAMETER_SIZE];
 
     if(read(sock_fd, buff, sizeof(buff)) < 0){
-        printf("Client %d disconnected\n", sock_fd);
+        printf("Client %d disconnected abruptly\n", sock_fd);
         fdDeleteFd(sock_fd);
         close(sock_fd);
         return;
@@ -225,6 +225,33 @@ void tcpHandler(int sock_fd){
             printf("TCP command not recognized. Ignoring...\n");
             break; 
     }
+}
+
+int parseCommandTcp(char *buff, char *command, int *key,  char *name, char *ip, int *port) {
+    int num_args = 0;
+    char dummy[10];
+    int i;
+
+    //Find the end of message char (\n)
+    for(i = 0; i < TCP_RCV_SIZE && buff[i] != '\0'; i++){
+        if(buff[i] == '\n'){
+            buff[i] = '\0';                           //sscanf ignores everything after \n
+            i = -1;
+            break;
+        }
+    }
+
+    //Check if a \n has been found
+    if(i != -1){
+        return -1;
+    }
+
+    if((num_args = sscanf(buff, "%s %d %s %s %d %s", command, key, name, ip, port, dummy)) == 5){
+        printf("TCP stream recieved has too many arguments\n");
+        return -1;
+    }
+    
+    return num_args;
 }
 
 int get_TCP_code (char *command) {

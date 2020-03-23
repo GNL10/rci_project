@@ -104,9 +104,10 @@ int parse_and_validate (char *buffer, char *cmd_in, int *key, char *name, char *
 	return n_args;
 }
 
-void read_command_line(char *command_line) {
+void read_command_line(char *command_line){
     fgets(command_line, BUFFER_SIZE,stdin);
 }
+
 int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port) {
     return sscanf(str, "%s %d %s %s %d", command, key, name, ip, port);
 }

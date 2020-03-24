@@ -39,7 +39,7 @@ int validate_number(char *str) {
 
 // copied from the internet!
 int validate_ip(char *ip_in) { //check whether the IP is valid or not
-	int num, dots = 0;
+	int dots = 0;
 	char *ptr;
 	char ip[INET6_ADDRSTRLEN];
 
@@ -51,6 +51,7 @@ int validate_ip(char *ip_in) { //check whether the IP is valid or not
 	if (ptr == NULL)
 		return 0;
 	while (ptr) {
+		int num;
 		if (!validate_number(ptr)) //check whether the sub string is holding only number or not
 			return 0;
 		num = atoi(ptr); //convert substring to number
@@ -85,7 +86,7 @@ int parse_and_validate (char *buffer, char *cmd_in, int *key, char *name, char *
 
     n_args = parse_command(buffer, cmd, key, name, ip, port);
     if (strcmp(cmd, cmd_in)) {
-        printf("Wrong command. UDP connection was expecting EKEY\n");
+        printf("Wrong command. UDP connection was expecting %s\n", cmd_in);
         printf("Received instead %s\n", buffer);
         exit(0);
     }
@@ -109,7 +110,7 @@ void read_command_line(char *command_line){
 }
 
 int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port) {
-    return sscanf(str, "%s %d %s %s %d", command, key, name, ip, port);
+    return sscanf(str, "%"PARAM_SIZE_STR"s %d %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %d", command, key, name, ip, port);
 }
 
 int get_command_code(char * command){

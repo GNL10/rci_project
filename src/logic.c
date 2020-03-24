@@ -9,7 +9,7 @@ extern int fd_vec[NUM_FIXED_FD];
 void entry (int key, char *name, char *ip, int port) {
     int sockfd, s_key, s_port;
     char message[8];
-    char buffer[BUFFER_SIZE], s_name[PARAMETER_SIZE], s_ip[INET6_ADDRSTRLEN];
+    char buffer[BUFFER_SIZE], s_name[PARAM_SIZE], s_ip[INET6_ADDRSTRLEN];
     struct sockaddr_in serv_addr;
 
     sprintf(message, "%s %d", "EFND", key);
@@ -17,11 +17,13 @@ void entry (int key, char *name, char *ip, int port) {
     sockfd = set_udp_cli(ip, port, &serv_addr);
     
     // send EFND i 
-    udp_send(sockfd, message, (struct sockaddr *) &serv_addr);
+    if (udp_send(sockfd, message, (struct sockaddr *) &serv_addr) == -1)
+        exit(1);
 
     // recv EKEY
     // what if it does not receive a message ? !!!!!!!!!!!
-    udp_recv(sockfd, buffer, (struct sockaddr *) &serv_addr);
+    if (udp_recv(sockfd, buffer, (struct sockaddr *) &serv_addr) == -1)
+        exit(1);
     close(sockfd);
     
     // must analyse message

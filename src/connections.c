@@ -52,10 +52,16 @@ int set_udp_cli (char *ip, int port, struct sockaddr_in *serv_addr) {
     return sockfd;
 }
 
-void udp_send (int sockfd, char *message, struct sockaddr* addr) {
-    sendto(sockfd, (const char *)message, strlen(message), 
+int udp_send (int sockfd, char *message, struct sockaddr* addr) {
+    int n;
+    n = sendto(sockfd, (const char *)message, strlen(message), 
         MSG_CONFIRM, (const struct sockaddr *) addr,  
             sizeof(*addr));
+    if (n == -1)
+        perror("ERROR:sendto");
+    else
+        printf("[UDP] Sent: %s\n", message);
+    return n;
 }
 
 int udp_recv (int sockfd, char *message, struct sockaddr* addr) {
@@ -65,6 +71,12 @@ int udp_recv (int sockfd, char *message, struct sockaddr* addr) {
     n = recvfrom(sockfd, (char *)message, UPD_RCV_SIZE,  
                 MSG_WAITALL, (struct sockaddr *) &addr, 
                 &len); 
+    if (n == -1)
+        perror("ERROR: recvfrom");
+    else{
+        message[n] = '\0';
+        printf("[UDP] Recv: %s\n", message);
+    }
     return n;
 }
 
@@ -112,7 +124,7 @@ void forwardHandler(int active_fd){
 void stdinHandler() {
     char command_line[BUFFER_SIZE];
     int key, port, args_num;
-    char name[PARAMETER_SIZE], ip[INET6_ADDRSTRLEN], command[PARAMETER_SIZE];
+    char name[PARAM_SIZE], ip[INET6_ADDRSTRLEN], command[PARAM_SIZE];
 
     read_command_line(command_line);
     args_num = parse_command(command_line, command, &key, name,  ip, &port);
@@ -172,6 +184,7 @@ void udpHandler(void) {
     n = recvfrom(fd_vec[UDP_FD], (char *)message, BUFFER_SIZE, MSG_WAITALL, (struct sockaddr *) &cli_addr, &len); 
     message[n] = '\0';
     printf("UDP message was received: %s\n", message);
+    
     sendto(fd_vec[UDP_FD], (const char *)"EKEY 15 name 127.0.0.1 6000", strlen("EKEY 15 name 127.0.0.1 6000"), 
         MSG_CONFIRM, (const struct sockaddr *) &cli_addr,  
             sizeof(cli_addr)); 
@@ -180,7 +193,7 @@ void udpHandler(void) {
 void tcpHandler(int sock_fd){
     char buff[TCP_RCV_SIZE];
     int args_num, key, port;
-    char ip[INET6_ADDRSTRLEN], name[PARAMETER_SIZE], command[PARAMETER_SIZE];
+    char ip[INET6_ADDRSTRLEN], name[PARAM_SIZE], command[PARAM_SIZE];
 
     if(read(sock_fd, buff, sizeof(buff)) < 0){
         printf("Client %d disconnected abruptly\n", sock_fd);
@@ -246,7 +259,8 @@ int parseCommandTcp(char *buff, char *command, int *key,  char *name, char *ip, 
         return -1;
     }
 
-    if((num_args = sscanf(buff, "%s %d %s %s %d %s", command, key, name, ip, port, dummy)) == 5){
+    // E se receber menos argumentos do que estava a espera ?
+    if((num_args = sscanf(buff, "%"PARAM_SIZE_STR"s %d %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %d %9s", command, key, name, ip, port, dummy)) == 6){
         printf("TCP stream recieved has too many arguments\n");
         return -1;
     }

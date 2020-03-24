@@ -8,7 +8,8 @@
 #include <sys/select.h>
 
 #define BUFFER_SIZE 1024
-#define PARAMETER_SIZE 64
+#define PARAM_SIZE 65       // must be PARAM_SIZE_STR + 1 !!
+#define PARAM_SIZE_STR "64" // must be PARAM_SIZE - 1 !!
 #define IP_SIZE 128
 
 void read_arguments(int argc, char *argv[], int *port, char *ip);

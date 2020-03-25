@@ -15,7 +15,7 @@
 #include "file_descriptors.h"
 
 // Quando um processo esta a tentar entrar no anel e dps a msg que recebe esta errada, ele deve sair do processo ou voltar ao menu?
-//Verificar retorno de todas as system calls
+// Verificar retorno de todas as system calls
 
 int fd_vec[NUM_FIXED_FD] = {0, 0, 0, 0, 0};
 Fd_Node* fd_stack = NULL;

@@ -180,7 +180,9 @@ void udpHandler(void) {
 
     memset(&cli_addr, 0, sizeof(cli_addr));
     len = sizeof(cli_addr);
-
+    /*if (udp_recv(sockfd, buffer, (struct sockaddr *) &serv_addr) == -1)
+        exit(1);
+    */
     n = recvfrom(fd_vec[UDP_FD], (char *)message, BUFFER_SIZE, MSG_WAITALL, (struct sockaddr *) &cli_addr, &len); 
     message[n] = '\0';
     printf("UDP message was received: %s\n", message);

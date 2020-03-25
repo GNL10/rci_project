@@ -1,3 +1,4 @@
+#include <sys/time.h>
 #include "connections.h"
 #include "file_descriptors.h"
 #include "logic.h"
@@ -52,31 +53,51 @@ int set_udp_cli (char *ip, int port, struct sockaddr_in *serv_addr) {
     return sockfd;
 }
 
-int udp_send (int sockfd, char *message, struct sockaddr* addr) {
+int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
+    int sockfd;
+    struct sockaddr_in serv_addr;
     int n;
-    n = sendto(sockfd, (const char *)message, strlen(message), 
-        MSG_CONFIRM, (const struct sockaddr *) addr,  
-            sizeof(*addr));
-    if (n == -1)
-        perror("ERROR:sendto");
-    else
-        printf("[UDP] Sent: %s\n", message);
-    return n;
-}
+    struct timeval timeout={3,0}; //set timeout for 3 seconds
 
-int udp_recv (int sockfd, char *message, struct sockaddr* addr) {
-    int n;
+    // Creating socket file descriptor 
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
+        perror("socket creation failed"); 
+        exit(EXIT_FAILURE); 
+    } 
+
+    serv_addr.sin_family = AF_INET; 
+    serv_addr.sin_port = htons(port); 
+    serv_addr.sin_addr.s_addr = inet_addr(ip);
+
+    // setting timeout
+    if (setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(struct timeval)) == -1) {  
+        perror("setsockopt");
+        close(sockfd);
+        exit(1);
+    }
+
+    n = sendto(sockfd, (const char *)msg_in, strlen(msg_in), 
+        MSG_CONFIRM, (const struct sockaddr *) &serv_addr,  
+            sizeof(serv_addr));
+    if (n == -1){
+        perror("ERROR:sendto");
+        close(sockfd);
+        return n;
+    }
+    printf("[UDP] Sent: %s\n", msg_in);
+
     socklen_t len;
 
-    n = recvfrom(sockfd, (char *)message, UPD_RCV_SIZE,  
-                MSG_WAITALL, (struct sockaddr *) &addr, 
+    n = recvfrom(sockfd, (char *)msg_out, UPD_RCV_SIZE,  
+                MSG_WAITALL, (struct sockaddr *) &serv_addr, 
                 &len); 
-    if (n == -1)
+    if (n == -1){
         perror("ERROR: recvfrom");
-    else{
-        message[n] = '\0';
-        printf("[UDP] Recv: %s\n", message);
+        return n;
     }
+    msg_out[n] = '\0';
+    printf("[UDP] Recv: %s\n", msg_out);
+    close(sockfd);
     return n;
 }
 
@@ -187,7 +208,7 @@ void udpHandler(void) {
     message[n] = '\0';
     printf("UDP message was received: %s\n", message);
     
-    sendto(fd_vec[UDP_FD], (const char *)"EKEY 15 name 127.0.0.1 6000", strlen("EKEY 15 name 127.0.0.1 6000"), 
+    sendto(fd_vec[UDP_FD], (const char *)"EKEY 15 name 127.0.0.1 3000", strlen("EKEY 15 name 127.0.0.1 3000"), 
         MSG_CONFIRM, (const struct sockaddr *) &cli_addr,  
             sizeof(cli_addr)); 
 }
@@ -203,8 +224,8 @@ void tcpHandler(int sock_fd){
         close(sock_fd);
         return;
     }
+    printf("[TCP] Recv: %s\n", buff);
     args_num = parse_command(buff, command, &key, name,  ip, &port);
-
     switch(get_TCP_code(command)) {
         case 0:     // FND
             if (args_num == 1+4)

@@ -16,6 +16,14 @@
 
 // Quando um processo esta a tentar entrar no anel e dps a msg que recebe esta errada, ele deve sair do processo ou voltar ao menu?
 // Verificar retorno de todas as system calls
+// fix udp recv and send functions
+// make port and ip global
+// fix bind error
+//atencao ao tamanho dos buffers a enviar
+// ciclo apos leitura de mensagens
+// ignore sigpipe
+// voltar ao menu 
+// nao definir porto do cliente
 
 int fd_vec[NUM_FIXED_FD] = {0, 0, 0, 0, 0};
 Fd_Node* fd_stack = NULL;
@@ -39,9 +47,11 @@ int main(int argc, char const *argv[]){
 	fdInsertNode(fd_vec[LISTEN_FD]);
 	fdInsertNode(fd_vec[UDP_FD]);
 	fdInsertNode(fd_vec[STDIN_FD]);
+	active_fd = fd_vec[STDIN_FD];
 
 	while(!end_flag){
-		printf("Enter a command:\n\n");
+		if(active_fd == fd_vec[STDIN_FD])
+			printf("Enter a command:\n");
 		fdSetAllSelect(&rd_set);
 		max_numbered_fd = fdMaxFdValue();
 		if(select(max_numbered_fd+1, &rd_set, NULL, NULL, NULL) == -1){
@@ -50,7 +60,7 @@ int main(int argc, char const *argv[]){
 		}
 
 		active_fd = fdPollFd(&rd_set);
-		
+
 		forwardHandler(active_fd);
 	}
 

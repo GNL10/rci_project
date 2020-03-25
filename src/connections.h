@@ -14,9 +14,7 @@
 #define TCP_RCV_SIZE 128
 
 int set_udp_server(char *ip, int port);
-int set_udp_cli (char *ip, int port, struct sockaddr_in *serv_addr);
-int udp_send (int sockfd, char *message, struct sockaddr* addr);
-int udp_recv (int sockfd, char *message, struct sockaddr* addr);
+int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out);
 
 int initTcpServer(char* ip, int port);
 void forwardHandler(int active_fd);
@@ -24,6 +22,7 @@ void forwardHandler(int active_fd);
 void stdinHandler(void);
 void udpHandler(void);
 void tcpHandler(int sock_fd);
+int parseCommandTcp(char *buff, char *command, int *key,  char *name, char *ip, int *port);
 int get_TCP_code (char *command);
 void listenHandler(void);
 

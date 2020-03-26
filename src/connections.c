@@ -45,6 +45,7 @@ int set_udp_server() {
     Sends msg_in to server
     Receives msg_out from server
     Recv times out after RECV_TIMEOUT seconds
+    returns -1 in case of error
 */
 int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     int sockfd, n;
@@ -73,7 +74,7 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     if (setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(struct timeval)) == -1) {  
         perror("setsockopt");
         close(sockfd);
-        exit(1);
+        return -1;
     }
 
     if (sendto(sockfd, (const char *)msg_in, strlen(msg_in), MSG_CONFIRM, 
@@ -87,7 +88,8 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     if ( (n = recvfrom(sockfd, (char *)msg_out, UPD_RCV_SIZE, MSG_WAITALL, 
               (struct sockaddr *) &serv_addr, &addr_len)) == -1) { 
         perror("ERROR: recvfrom");
-        return n;
+        close(sockfd);
+        return -1;
     }
     msg_out[n] = '\0';
     printf("[UDP] Recv: %s\n", msg_out);
@@ -122,45 +124,46 @@ int initTcpServer(){
 	return server_fd;
 }
 
-void forwardHandler(int active_fd){
+int forwardHandler(int active_fd){
 
     if(active_fd == fd_vec[LISTEN_FD]){
         listenHandler();
     }else if(active_fd == fd_vec[UDP_FD]){
         udpHandler();
     }else if(active_fd == fd_vec[STDIN_FD]){
-        stdinHandler();
+        return stdinHandler();
     }else{              //Generic TCP incoming message
         tcpHandler(active_fd);
     }
-    
+    return 0;   // TODO delete!    
 }
 
-void stdinHandler() {
+int stdinHandler() {
     char command_line[BUFFER_SIZE];
     int key, port, args_num;
     char name[PARAM_SIZE], ip[INET6_ADDRSTRLEN], command[PARAM_SIZE];
 
     read_command_line(command_line);
     args_num = parse_command(command_line, command, &key, name,  ip, &port);
+    args_num = validate_n_parameters(args_num, key, ip, port); // args_num becomes number of valid parameters!
     switch(get_command_code(command)) {
         case 0:     // new
             if (args_num == 1+1)
                 printf("NEW FUNCTION TO BE DEFINED\n");
             else
-                printf("The entry command needs 1 argument\nUsage: new <key>\n");
+                printf("The entry command needs 1 argument\nUsage: new <key>\n\n");
             break;
         case 1:     // entry
             if (args_num == 1+4)
                 entry(key, name, ip, port);
             else
-                printf("The entry command needs 4 arguments\nUsage: entry <key> <name> <ip> <port>\n");
+                printf("The entry command needs 4 arguments\nUsage: entry <key> <name> <ip> <port>\n\n");
             break;
         case 2:     // sentry
             if (args_num == 1+4)
                 printf("SENTRY FUNCTION TO BE DEFINED\n");
             else
-                printf("The sentry command needs 4 arguments\nUsage: sentry <key> <name> <ip> <port>\n");
+                printf("The sentry command needs 4 arguments\nUsage: sentry <key> <name> <ip> <port>\n\n");
             break;
         case 3:     // leave
             printf("LEAVE FUNCTION TO BE DEFINED\n");
@@ -172,19 +175,19 @@ void stdinHandler() {
             if (args_num == 1+1)
                 printf("FIND FUNCTION TO BE DEFINED\n");
             else
-                printf("The find command needs 1 argument\nUsage: find <key>\n");
+                printf("The find command needs 1 argument\nUsage: find <key>\n\n");
             break;
         case -2:    // exit
-            printf("EXIT FUNCTION TO BE DEFINED\n");
+            return 1;   // changes end flag to 1 when returned
             break;
         default :   // incorrect command
             printf("Command not recognized\n");
             printf("Available commands:\n");
             printf("\tnew <key>\n\tentry <key> <name> <ip> <port>\n");
             printf("\tsentry <key> <name> <ip> <port>\n\tleave\n\tshow\n\tfind <key>\n\texit\n\n\n");
-            break;
-        
+            break;     
     }
+    return 0;
 }
 
 void udpHandler(void) {
@@ -202,7 +205,9 @@ void udpHandler(void) {
     message[n] = '\0';
     printf("UDP message was received: %s\n", message);
     
-    sendto(fd_vec[UDP_FD], (const char *)"EKEY 15 name 127.0.0.1 3000", strlen("EKEY 15 name 127.0.0.1 3000"), 
+    char todelete[100];
+    sprintf(todelete, "EKEY 15 name %s %d", IP, PORT);
+    sendto(fd_vec[UDP_FD], (const char *)todelete, strlen(todelete), 
         MSG_CONFIRM, (const struct sockaddr *) &cli_addr,  
             sizeof(cli_addr)); 
 }

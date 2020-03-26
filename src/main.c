@@ -14,7 +14,6 @@
 #include "utils.h"
 #include "file_descriptors.h"
 
-// Quando um processo esta a tentar entrar no anel e dps a msg que recebe esta errada, ele deve sair do processo ou voltar ao menu?
 // Verificar retorno de todas as system calls
 // fix bind error
 // atencao ao tamanho dos buffers a enviar
@@ -59,7 +58,7 @@ int main(int argc, char const *argv[]){
 
 		active_fd = fdPollFd(&rd_set);
 
-		forwardHandler(active_fd);
+		end_flag = forwardHandler(active_fd);
 	}
 
 	//TODO close all sockets

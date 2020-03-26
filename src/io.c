@@ -72,7 +72,6 @@ int validate_ip(char *ip_in) { //check whether the IP is valid or not
 }
 
 int validate_port(int port) {
-	// TODO: ask teacher about the upper limit !!
 	if (port <= 1023 || port > 65535) // 2^16-1: 65535
 		return 0;
 	return 1;
@@ -84,29 +83,41 @@ int validate_key(int key) {
 	return 1;
 }
 
-int parse_and_validate (char *buffer, char *cmd_in, int *key, char *name, char *ip, int *port) {
-    char cmd[BUFFER_SIZE];
-	int n_args;
-
-    n_args = parse_command(buffer, cmd, key, name, ip, port);
-    if (strcmp(cmd, cmd_in)) {
-        printf("Wrong command. UDP connection was expecting %s\n", cmd_in);
-        printf("Received instead %s\n", buffer);
-        exit(0);
+// validates key, ip and port
+// validates key if n_args >= 2
+// validates ip if n_args >= 4
+// validates port if n_args >= 5
+int validate_n_parameters(int n_args, int key, char *ip, int port) {
+	if(n_args >= 2) {	// command + key = 2
+        if(!validate_key(key)){
+			printf("ERROR: KEY IS NOT VALID\n");
+        	return 1;
+		}
     }
-    if(!validate_ip(ip)) {
-        printf("ERROR: IP ADDRESS IS NOT VALID!\n");
-        exit(0);
+	else
+		return 1;
+	
+	if(n_args >= 4) { // command + key + name + ip = 4
+		if(!validate_ip(ip)){
+        	printf("ERROR: IP ADDRESS IS NOT VALID!\n");
+        	return 2;
+		}
     }
-    if(!validate_port(*port)) {
-        printf("ERROR: PORT IS NOT VALID!\n");
-        exit(0);
+	else
+		return 2;
+    if(n_args >= 5) { // command + key + name + ip + port = 5
+    	if(!validate_port(port)) {
+			printf("ERROR: PORT IS NOT VALID!\n");
+       		return 4;
+		}
     }
-    if(!validate_key(*key)) {
-        printf("ERROR: KEY IS NOT VALID\n");
-        exit(0);
+	else
+		return 4;	
+	if (port == PORT && (strcmp(IP, ip) == 0)) { // avoid sending a message to itself
+        printf("ERROR: IP and PORT MATCH THE ONES FROM THIS PROCESS!\n");
+        return 2;
     }
-	return n_args;
+	return 5;
 }
 
 void read_command_line(char *command_line){

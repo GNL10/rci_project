@@ -5,22 +5,28 @@
 
 
 extern int fd_vec[NUM_FIXED_FD];
+extern int PORT;
+extern char IP[];
 
 void entry (int key, char *name, char *ip, int port) {
     int s_key, s_port;
-    char message[8];
-    char buffer[BUFFER_SIZE], s_name[PARAM_SIZE], s_ip[INET6_ADDRSTRLEN];
+    char send_message[8];
+    char recv_msg[BUFFER_SIZE], command[PARAM_SIZE], s_name[PARAM_SIZE], s_ip[INET6_ADDRSTRLEN];
 
-    sprintf(message, "%s %d", "EFND", key);
-    
-    udp_set_send_recv(ip, port, message, buffer);
+    sprintf(send_message, "%s %d", "EFND", key);
+    if (udp_set_send_recv(ip, port, send_message, recv_msg) == -1)
+        return; // if udp comms fail
 
     // must analyse message
-    if (parse_and_validate(buffer, "EKEY", &s_key, s_name, s_ip, &s_port) == 4 + 1 ) {
-        printf("Success: key: %d | name: %s | ip: %s | port %d\n", s_key, s_name, s_ip, s_port);
+    if (parse_command(recv_msg, command, &s_key, s_name, s_ip, &s_port) == 4 + 1) {
+        if ((strcmp("EKEY", command) == 0) && (validate_n_parameters(5, s_key, s_ip, s_port) < 5)){
+            printf("[UDP] WRONG MESSAGE: %s\n", recv_msg);
+            return;
+        } 
     }
     else {
-        printf("Received wrong udp message\n");
+        printf("[UDP] WRONG MESSAGE: %s\n", recv_msg);
+        return;
     }
     
 }

@@ -4,8 +4,11 @@
 #include "file_descriptors.h"
 
 extern int fd_vec[NUM_FIXED_FD];
+extern int PORT;
+extern char IP[];
 
-void read_arguments(int argc, char *argv[], int *port, char *ip) {
+void read_arguments(int argc, char *argv[]) {
+	int port_temp;
 
 	// must have 2 arguments IP and PORT
 	if (argc != 3) {
@@ -14,17 +17,18 @@ void read_arguments(int argc, char *argv[], int *port, char *ip) {
 		exit(1);
 	}
 
-	strcpy(ip, argv[1]); // needs to be here, argv[1] is destroyed by the function validate_ip
+	strcpy(IP, argv[1]); // needs to be here, argv[1] is destroyed by the function validate_ip
 	if (validate_ip(argv[1]) == 0) {
 		printf("ERROR: IP ADDRESS IS NOT VALID!\n");
 		exit(1);
 	}
 
-	sscanf(argv[2], "%d", port); // check for sscanf errors if needed
-	if (validate_port(*port) == 0) {
+	sscanf(argv[2], "%d", &port_temp); // check for sscanf errors if needed
+	if (validate_port(port_temp) == 0) {
 		printf("ERROR: PORT IS NOT VALID!\n");
 		exit(1);
 	}
+	PORT = port_temp;
 }
 
 // copied from the internet!

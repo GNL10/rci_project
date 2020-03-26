@@ -12,11 +12,12 @@
 
 #define UPD_RCV_SIZE 1024
 #define TCP_RCV_SIZE 128
+#define RECV_TIMEOUT 3 // seconds
 
-int set_udp_server(char *ip, int port);
+int set_udp_server();
 int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out);
 
-int initTcpServer(char* ip, int port);
+int initTcpServer();
 void forwardHandler(int active_fd);
 
 void stdinHandler(void);

@@ -1,14 +1,18 @@
+#define _POSIX_C_SOURCE 200112L // to fix compile error in ide compiler (netdb.h library), gcc does not need it!
 #include <sys/time.h>
+#include <netdb.h>
+
 #include "connections.h"
 #include "file_descriptors.h"
 #include "logic.h"
 #include "io.h"
 
-
 extern int fd_vec[NUM_FIXED_FD];
+extern int PORT;
+extern char IP[];
 
 // becomes ready to receive udp messages on sockfd
-int set_udp_server(char *ip, int port) {
+int set_udp_server() {
 	int sockfd; 
     struct sockaddr_in servaddr; 
 
@@ -23,8 +27,8 @@ int set_udp_server(char *ip, int port) {
       
     // Filling server information 
     servaddr.sin_family = AF_INET;
-    inet_pton(AF_INET, ip, &(servaddr.sin_addr));
-    servaddr.sin_port = htons(port);
+    inet_pton(AF_INET, IP, &(servaddr.sin_addr));
+    servaddr.sin_port = htons(PORT);
       
     // Bind the socket with the server address 
     if ( bind(sockfd, (const struct sockaddr *)&servaddr,  
@@ -37,37 +41,33 @@ int set_udp_server(char *ip, int port) {
     return sockfd; 
 }  
 
-int set_udp_cli (char *ip, int port, struct sockaddr_in *serv_addr) {
-    int sockfd;
-    
-    // Creating socket file descriptor 
-    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
-        perror("socket creation failed"); 
-        exit(EXIT_FAILURE); 
-    } 
-
-    serv_addr->sin_family = AF_INET; 
-    serv_addr->sin_port = htons(port); 
-    serv_addr->sin_addr.s_addr = inet_addr(ip);
-
-    return sockfd;
-}
-
+/*  Sets udp client
+    Sends msg_in to server
+    Receives msg_out from server
+    Recv times out after RECV_TIMEOUT seconds
+*/
 int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
-    int sockfd;
+    int sockfd, n;
+    struct addrinfo hints, *res;
+    struct timeval timeout={RECV_TIMEOUT,0}; //set timeout
+    char port_str[5];
     struct sockaddr_in serv_addr;
-    int n;
-    struct timeval timeout={3,0}; //set timeout for 3 seconds
+    socklen_t addr_len;
 
     // Creating socket file descriptor 
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1 ) { 
         perror("socket creation failed"); 
-        exit(EXIT_FAILURE); 
-    } 
+        return -1;
+    }
 
-    serv_addr.sin_family = AF_INET; 
-    serv_addr.sin_port = htons(port); 
-    serv_addr.sin_addr.s_addr = inet_addr(ip);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family=AF_INET;    // IPv4
+    hints.ai_socktype=SOCK_DGRAM;  // UDP socket
+    sprintf(port_str, "%d", port);
+    if(getaddrinfo(ip, port_str, &hints, &res)) {
+        printf("ERROR: getaddrinfo failed\n");
+        return -1;
+    }
 
     // setting timeout
     if (setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(struct timeval)) == -1) {  
@@ -76,22 +76,16 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
         exit(1);
     }
 
-    n = sendto(sockfd, (const char *)msg_in, strlen(msg_in), 
-        MSG_CONFIRM, (const struct sockaddr *) &serv_addr,  
-            sizeof(serv_addr));
-    if (n == -1){
+    if (sendto(sockfd, (const char *)msg_in, strlen(msg_in), MSG_CONFIRM, 
+        (const struct sockaddr *) res->ai_addr, res->ai_addrlen) == -1) {
         perror("ERROR:sendto");
         close(sockfd);
-        return n;
+        return -1;
     }
     printf("[UDP] Sent: %s\n", msg_in);
 
-    socklen_t len;
-
-    n = recvfrom(sockfd, (char *)msg_out, UPD_RCV_SIZE,  
-                MSG_WAITALL, (struct sockaddr *) &serv_addr, 
-                &len); 
-    if (n == -1){
+    if ( (n = recvfrom(sockfd, (char *)msg_out, UPD_RCV_SIZE, MSG_WAITALL, 
+              (struct sockaddr *) &serv_addr, &addr_len)) == -1) { 
         perror("ERROR: recvfrom");
         return n;
     }
@@ -101,7 +95,7 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     return n;
 }
 
-int initTcpServer(char* ip, int port){
+int initTcpServer(){
     struct sockaddr_in local_addr;
     int server_fd;
 	
@@ -111,8 +105,8 @@ int initTcpServer(char* ip, int port){
 	}
 
 	local_addr.sin_family = AF_INET;
-    inet_pton(AF_INET, ip, &(local_addr.sin_addr));                         
-    local_addr.sin_port = htons(port); 
+    inet_pton(AF_INET, IP, &(local_addr.sin_addr));                         
+    local_addr.sin_port = htons(PORT); 
 
 	if(bind(server_fd, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0){					//Verificar se não houve erro a fazer bind
 		perror("bind");

@@ -16,32 +16,30 @@
 
 // Quando um processo esta a tentar entrar no anel e dps a msg que recebe esta errada, ele deve sair do processo ou voltar ao menu?
 // Verificar retorno de todas as system calls
-// fix udp recv and send functions
-// make port and ip global
 // fix bind error
-//atencao ao tamanho dos buffers a enviar
+// atencao ao tamanho dos buffers a enviar
 // ciclo apos leitura de mensagens
 // ignore sigpipe
 // voltar ao menu 
-// nao definir porto do cliente
+// ask what the succ (name) means, and define UPD_RCV_SIZE accordingly
 
 int fd_vec[NUM_FIXED_FD] = {0, 0, 0, 0, 0};
 Fd_Node* fd_stack = NULL;
+int PORT;
+char IP[16];
 
 int main(int argc, char const *argv[]){
-	int port;
-	char ip[INET6_ADDRSTRLEN];
 	int max_numbered_fd;
 	char end_flag = 0;
 	int active_fd;
 	fd_set rd_set;			//read set
 
-	read_arguments(argc, (char**) argv, &port, ip);
+	read_arguments(argc, (char**) argv);
 
 	FD_ZERO(&rd_set);									// clear the descriptor set
 
-	fd_vec[LISTEN_FD] = initTcpServer(ip, port);		//Setup tcp server
-	fd_vec[UDP_FD] = set_udp_server(ip, port);			//Setup udp server
+	fd_vec[LISTEN_FD] = initTcpServer();		//Setup tcp server
+	fd_vec[UDP_FD] = set_udp_server();			//Setup udp server
 
 	//Insert current active sockets into fd stack
 	fdInsertNode(fd_vec[LISTEN_FD]);
@@ -63,7 +61,6 @@ int main(int argc, char const *argv[]){
 
 		forwardHandler(active_fd);
 	}
-
 
 	//TODO close all sockets
 

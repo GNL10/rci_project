@@ -12,7 +12,7 @@
 #define PARAM_SIZE_STR "64" // must be PARAM_SIZE - 1 !!
 #define IP_SIZE 128
 
-void read_arguments(int argc, char *argv[], int *port, char *ip);
+void read_arguments(int argc, char *argv[]);
 
 int validate_number(char *str);
 int validate_ip(char *ip);

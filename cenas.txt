@@ -1,0 +1,13 @@
+FND k i i.IP i.port\n
+
+KEY k succ succ.IP succ.port\n
+
+SUCCCONF\n
+
+SUCC succ succ.IP succ.port\n
+
+NEW i i.IP i.port\n
+
+
+//TESTES A FAZER:
+-Um cliente mandar milhões de bytes sem nunca mandar um \n

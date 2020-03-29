@@ -1,8 +1,7 @@
 #include "connections.h"
-#include "file_descriptors.h"
 #include "logic.h"
 #include "io.h"
-
+#include "utils.h"
 
 extern int fd_vec[NUM_FIXED_FD];
 
@@ -108,6 +107,7 @@ int initTcpServer(char* ip, int port){
 }
 
 void forwardHandler(int active_fd){
+    Fd_Node* found_node;
 
     if(active_fd == fd_vec[LISTEN_FD]){
         listenHandler();
@@ -116,7 +116,8 @@ void forwardHandler(int active_fd){
     }else if(active_fd == fd_vec[STDIN_FD]){
         stdinHandler();
     }else{              //Generic TCP incoming message
-        tcpHandler(active_fd);
+        found_node = fdFindNode(active_fd);
+        tcpHandler(active_fd, found_node);
     }
     
 }
@@ -192,18 +193,21 @@ void udpHandler(void) {
             sizeof(cli_addr)); 
 }
 
-void tcpHandler(int sock_fd){
-    char buff[TCP_RCV_SIZE];
+void tcpHandler(int sock_fd, Fd_Node* active_node){
     int args_num, key, port;
     char ip[INET6_ADDRSTRLEN], name[PARAM_SIZE], command[PARAM_SIZE];
+    char read_buff[TCP_RCV_SIZE];
+    int read_bytes = 0;
 
-    if(read(sock_fd, buff, sizeof(buff)) < 0){
+    if((read_bytes = read(sock_fd, read_buff, TCP_RCV_SIZE) )<= 0){
         printf("Client %d disconnected abruptly\n", sock_fd);
         fdDeleteFd(sock_fd);
         close(sock_fd);
         return;
     }
-    args_num = parse_command(buff, command, &key, name,  ip, &port);
+    args_num = parseCommandTcp(active_node, read_buff, read_bytes, command, &key, name,  ip, &port);
+
+    
 
     switch(get_TCP_code(command)) {
         case 0:     // FND
@@ -242,31 +246,43 @@ void tcpHandler(int sock_fd){
     }
 }
 
-int parseCommandTcp(char *buff, char *command, int *key,  char *name, char *ip, int *port) {
+int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *key,  char *name, char *ip, int *port){
     int num_args = 0;
     char dummy[10];
     int i;
 
     //Find the end of message char (\n)
-    for(i = 0; i < TCP_RCV_SIZE && buff[i] != '\0'; i++){
-        if(buff[i] == '\n'){
-            buff[i] = '\0';                           //sscanf ignores everything after \n
+    for(i = 0; i < TCP_RCV_SIZE && i < read_bytes; i++){
+        if(read_buff[i] == '\n'){
+            read_buff[i] = '\0';                           //sscanf ignores everything after \n
             i = -1;
             break;
         }
     }
 
-    //Check if a \n has been found
+
+    //If a \n hasn't been found
     if(i != -1){
-        return -1;
+        active_node->buff_avai_index = appendVector(read_buff, active_node->buff, active_node->buff_avai_index, read_bytes);        //Store the message in fd buffer
+        return ERR_INCOMP_MSG_TCP;
     }
 
-    // E se receber menos argumentos do que estava a espera ?
-    if((num_args = sscanf(buff, "%"PARAM_SIZE_STR"s %d %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %d %9s", command, key, name, ip, port, dummy)) == 6){
+    //If there's part of a message in the fd buffer
+    if(active_node->buff_avai_index){
+        active_node->buff_avai_index = appendVector(read_buff, active_node->buff, active_node->buff_avai_index, read_bytes);        //Store the message in fd buffer
+        if(active_node->buff_avai_index == TCP_RCV_SIZE){           //If buffer is full
+            active_node->buff_avai_index = 0;
+            return ERR_ARGS_TCP;                                     //The message is too big, hence is invalid
+        }
+    }
+
+
+    if((num_args = sscanf(active_node->buff, "%"PARAM_SIZE_STR"s %d %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %d %9s", command, key, name, ip, port, dummy)) == 6){
         printf("TCP stream recieved has too many arguments\n");
-        return -1;
+        return -2;
     }
     
+    active_node->buff_avai_index = 0;
     return num_args;
 }
 

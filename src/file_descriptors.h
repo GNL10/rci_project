@@ -5,8 +5,10 @@
 #include <stdio.h>
 #include <sys/select.h>
 
-
 #define NUM_FIXED_FD 5
+
+#define TCP_RCV_SIZE 128
+
 
 #define LISTEN_FD 0
 #define UDP_FD 1
@@ -15,9 +17,11 @@
 #define PREDECESSOR_FD 4
 
 typedef struct Fd_Node_Struct{
-    int fd;
+    char buff[TCP_RCV_SIZE];
     struct Fd_Node_Struct* next;
     struct Fd_Node_Struct* prev;
+    int fd;
+    int buff_avai_index;            //First index avaiable in buff
 }Fd_Node;
 
 void fdInsertNode(int fd);
@@ -27,6 +31,7 @@ void fdDeleteFd(int del_fd);
 void fdSetAllSelect(fd_set* rd_set);
 int fdMaxFdValue(void);
 int fdPollFd(fd_set* _rd_set);
+Fd_Node* fdFindNode(int fd);
 
 
 #endif

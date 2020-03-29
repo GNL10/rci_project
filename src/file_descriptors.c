@@ -14,6 +14,8 @@ void fdInsertNode(int fd){
         exit(EXIT_FAILURE);
     }
     new_node->fd = fd;
+    new_node->buff[0] = '\0';
+    new_node->buff_avai_index = 0;
 
     new_node->prev = NULL;
     new_node->next = fd_stack;
@@ -68,7 +70,6 @@ void fdDeleteFd(int del_fd){
 void fdSetAllSelect(fd_set* rd_set){
     Fd_Node* aux;
 
-    FD_ZERO(rd_set);									// clear the descriptor set
     for(aux = fd_stack; aux != NULL; aux = aux->next){
         FD_SET(aux->fd, rd_set);
     }
@@ -96,4 +97,17 @@ int fdPollFd(fd_set* _rd_set){
 	}
 	fprintf(stderr, "No fd active");
 	return -1;
+}
+
+//Finds node with fd fd
+Fd_Node* fdFindNode(int fd){
+    Fd_Node* aux;
+
+    for(aux = fd_stack; aux != NULL; aux = aux->next){
+        if(aux->fd == fd){
+            return aux;
+        }
+    }
+
+    return NULL;
 }

@@ -17,16 +17,15 @@
 
 #define ERR_ARGS_TCP -2                 //Error in arguments
 #define ERR_INCOMP_MSG_TCP -1           //Message incomplete
+#define RECV_TIMEOUT 3 // seconds
 
-int set_udp_server(char *ip, int port);
-int set_udp_cli (char *ip, int port, struct sockaddr_in *serv_addr);
-int udp_send (int sockfd, char *message, struct sockaddr* addr);
-int udp_recv (int sockfd, char *message, struct sockaddr* addr);
+int set_udp_server();
+int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out);
 
-int initTcpServer(char* ip, int port);
-void forwardHandler(int active_fd);
+int initTcpServer();
+int forwardHandler(int active_fd);
 
-void stdinHandler(void);
+int stdinHandler(void);
 void udpHandler(void);
 void tcpHandler(int sock_fd, Fd_Node* active_node);
 int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *key,  char *name, char *ip, int *port);

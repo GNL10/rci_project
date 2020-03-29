@@ -1,12 +1,18 @@
+#define _POSIX_C_SOURCE 200112L // to fix compile error in ide compiler (netdb.h library), gcc does not need it!
+#include <sys/time.h>
+#include <netdb.h>
+
 #include "connections.h"
 #include "logic.h"
 #include "io.h"
 #include "utils.h"
 
 extern int fd_vec[NUM_FIXED_FD];
+extern int PORT;
+extern char IP[];
 
 // becomes ready to receive udp messages on sockfd
-int set_udp_server(char *ip, int port) {
+int set_udp_server() {
 	int sockfd; 
     struct sockaddr_in servaddr; 
 
@@ -21,8 +27,8 @@ int set_udp_server(char *ip, int port) {
       
     // Filling server information 
     servaddr.sin_family = AF_INET;
-    inet_pton(AF_INET, ip, &(servaddr.sin_addr));
-    servaddr.sin_port = htons(port);
+    inet_pton(AF_INET, IP, &(servaddr.sin_addr));
+    servaddr.sin_port = htons(PORT);
       
     // Bind the socket with the server address 
     if ( bind(sockfd, (const struct sockaddr *)&servaddr,  
@@ -35,51 +41,63 @@ int set_udp_server(char *ip, int port) {
     return sockfd; 
 }  
 
-int set_udp_cli (char *ip, int port, struct sockaddr_in *serv_addr) {
-    int sockfd;
-    
+/*  Sets udp client
+    Sends msg_in to server
+    Receives msg_out from server
+    Recv times out after RECV_TIMEOUT seconds
+    returns -1 in case of error
+*/
+int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
+    int sockfd, n;
+    struct addrinfo hints, *res;
+    struct timeval timeout={RECV_TIMEOUT,0}; //set timeout
+    char port_str[5];
+    struct sockaddr_in serv_addr;
+    socklen_t addr_len;
+
     // Creating socket file descriptor 
-    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1 ) { 
         perror("socket creation failed"); 
-        exit(EXIT_FAILURE); 
-    } 
-
-    serv_addr->sin_family = AF_INET; 
-    serv_addr->sin_port = htons(port); 
-    serv_addr->sin_addr.s_addr = inet_addr(ip);
-
-    return sockfd;
-}
-
-int udp_send (int sockfd, char *message, struct sockaddr* addr) {
-    int n;
-    n = sendto(sockfd, (const char *)message, strlen(message), 
-        MSG_CONFIRM, (const struct sockaddr *) addr,  
-            sizeof(*addr));
-    if (n == -1)
-        perror("ERROR:sendto");
-    else
-        printf("[UDP] Sent: %s\n", message);
-    return n;
-}
-
-int udp_recv (int sockfd, char *message, struct sockaddr* addr) {
-    int n;
-    socklen_t len;
-
-    n = recvfrom(sockfd, (char *)message, UPD_RCV_SIZE,  
-                MSG_WAITALL, (struct sockaddr *) &addr, 
-                &len); 
-    if (n == -1)
-        perror("ERROR: recvfrom");
-    else{
-        message[n] = '\0';
-        printf("[UDP] Recv: %s\n", message);
+        return -1;
     }
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family=AF_INET;    // IPv4
+    hints.ai_socktype=SOCK_DGRAM;  // UDP socket
+    sprintf(port_str, "%d", port);
+    if(getaddrinfo(ip, port_str, &hints, &res)) {
+        printf("ERROR: getaddrinfo failed\n");
+        return -1;
+    }
+
+    // setting timeout
+    if (setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(struct timeval)) == -1) {  
+        perror("setsockopt");
+        close(sockfd);
+        return -1;
+    }
+
+    if (sendto(sockfd, (const char *)msg_in, strlen(msg_in), MSG_CONFIRM, 
+        (const struct sockaddr *) res->ai_addr, res->ai_addrlen) == -1) {
+        perror("ERROR:sendto");
+        close(sockfd);
+        return -1;
+    }
+    printf("[UDP] Sent: %s\n", msg_in);
+
+    if ( (n = recvfrom(sockfd, (char *)msg_out, UPD_RCV_SIZE, MSG_WAITALL, 
+              (struct sockaddr *) &serv_addr, &addr_len)) == -1) { 
+        perror("ERROR: recvfrom");
+        close(sockfd);
+        return -1;
+    }
+    msg_out[n] = '\0';
+    printf("[UDP] Recv: %s\n", msg_out);
+    close(sockfd);
     return n;
 }
 
-int initTcpServer(char* ip, int port){
+int initTcpServer(){
     struct sockaddr_in local_addr;
     int server_fd;
 	
@@ -89,8 +107,8 @@ int initTcpServer(char* ip, int port){
 	}
 
 	local_addr.sin_family = AF_INET;
-    inet_pton(AF_INET, ip, &(local_addr.sin_addr));                         
-    local_addr.sin_port = htons(port); 
+    inet_pton(AF_INET, IP, &(local_addr.sin_addr));                         
+    local_addr.sin_port = htons(PORT); 
 
 	if(bind(server_fd, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0){					//Verificar se não houve erro a fazer bind
 		perror("bind");
@@ -106,7 +124,7 @@ int initTcpServer(char* ip, int port){
 	return server_fd;
 }
 
-void forwardHandler(int active_fd){
+int forwardHandler(int active_fd){
     Fd_Node* found_node;
 
     if(active_fd == fd_vec[LISTEN_FD]){
@@ -114,39 +132,40 @@ void forwardHandler(int active_fd){
     }else if(active_fd == fd_vec[UDP_FD]){
         udpHandler();
     }else if(active_fd == fd_vec[STDIN_FD]){
-        stdinHandler();
+        return stdinHandler();
     }else{              //Generic TCP incoming message
         found_node = fdFindNode(active_fd);
         tcpHandler(active_fd, found_node);
     }
-    
+    return 0;   // TODO delete!    
 }
 
-void stdinHandler() {
+int stdinHandler() {
     char command_line[BUFFER_SIZE];
     int key, port, args_num;
     char name[PARAM_SIZE], ip[INET6_ADDRSTRLEN], command[PARAM_SIZE];
 
     read_command_line(command_line);
     args_num = parse_command(command_line, command, &key, name,  ip, &port);
+    args_num = validate_n_parameters(args_num, key, ip, port); // args_num becomes number of valid parameters!
     switch(get_command_code(command)) {
         case 0:     // new
             if (args_num == 1+1)
                 printf("NEW FUNCTION TO BE DEFINED\n");
             else
-                printf("The entry command needs 1 argument\nUsage: new <key>\n");
+                printf("The entry command needs 1 argument\nUsage: new <key>\n\n");
             break;
         case 1:     // entry
             if (args_num == 1+4)
                 entry(key, name, ip, port);
             else
-                printf("The entry command needs 4 arguments\nUsage: entry <key> <name> <ip> <port>\n");
+                printf("The entry command needs 4 arguments\nUsage: entry <key> <name> <ip> <port>\n\n");
             break;
         case 2:     // sentry
             if (args_num == 1+4)
                 printf("SENTRY FUNCTION TO BE DEFINED\n");
             else
-                printf("The sentry command needs 4 arguments\nUsage: sentry <key> <name> <ip> <port>\n");
+                printf("The sentry command needs 4 arguments\nUsage: sentry <key> <name> <ip> <port>\n\n");
             break;
         case 3:     // leave
             printf("LEAVE FUNCTION TO BE DEFINED\n");
@@ -158,19 +177,19 @@ void stdinHandler() {
             if (args_num == 1+1)
                 printf("FIND FUNCTION TO BE DEFINED\n");
             else
-                printf("The find command needs 1 argument\nUsage: find <key>\n");
+                printf("The find command needs 1 argument\nUsage: find <key>\n\n");
             break;
         case -2:    // exit
-            printf("EXIT FUNCTION TO BE DEFINED\n");
+            return 1;   // changes end flag to 1 when returned
             break;
         default :   // incorrect command
             printf("Command not recognized\n");
             printf("Available commands:\n");
             printf("\tnew <key>\n\tentry <key> <name> <ip> <port>\n");
             printf("\tsentry <key> <name> <ip> <port>\n\tleave\n\tshow\n\tfind <key>\n\texit\n\n\n");
-            break;
-        
+            break;     
     }
+    return 0;
 }
 
 void udpHandler(void) {
@@ -188,7 +207,9 @@ void udpHandler(void) {
     message[n] = '\0';
     printf("UDP message was received: %s\n", message);
     
-    sendto(fd_vec[UDP_FD], (const char *)"EKEY 15 name 127.0.0.1 6000", strlen("EKEY 15 name 127.0.0.1 6000"), 
+    char todelete[100];
+    sprintf(todelete, "EKEY 15 name %s %d", IP, PORT);
+    sendto(fd_vec[UDP_FD], (const char *)todelete, strlen(todelete), 
         MSG_CONFIRM, (const struct sockaddr *) &cli_addr,  
             sizeof(cli_addr)); 
 }

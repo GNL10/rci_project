@@ -9,7 +9,6 @@
 
 #define TCP_RCV_SIZE 128
 
-
 #define LISTEN_FD 0
 #define UDP_FD 1
 #define STDIN_FD 2

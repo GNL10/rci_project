@@ -215,61 +215,26 @@ void udpHandler(void) {
 }
 
 void tcpHandler(int sock_fd, Fd_Node* active_node){
-    int args_num, key, port;
-    char ip[INET6_ADDRSTRLEN], name[PARAM_SIZE], command[PARAM_SIZE];
+    int args_num, first_int, second_int, port;
+    char ip[INET_ADDRSTRLEN], command[PARAM_SIZE];
     char read_buff[TCP_RCV_SIZE];
     int read_bytes = 0;
 
     if((read_bytes = read(sock_fd, read_buff, TCP_RCV_SIZE) )<= 0){
         printf("Client %d disconnected abruptly\n", sock_fd);
+        //TODO send message to another node that needs to be disconnected
         fdDeleteFd(sock_fd);
         close(sock_fd);
         return;
     }
-    args_num = parseCommandTcp(active_node, read_buff, read_bytes, command, &key, name,  ip, &port);
 
-    
+    args_num = parseCommandTcp(active_node, read_buff, read_bytes, command, &first_int, &second_int, ip, &port);
 
-    switch(get_TCP_code(command)) {
-        case 0:     // FND
-            if (args_num == 1+4)
-                printf("FND FUNCTION TO BE DEFINED\n");
-            else
-                printf("ERROR: FND needs 4 arguments\n");
-            break;
-        case 1:     // KEY
-            if (args_num == 1+4)
-                printf("KEY FUNCTION TO BE DEFINED\n");
-            else
-                printf("ERROR: KEY needs 4 arguments\n");
-            break;
-        case 2:     // SUCCONF
-            if (args_num == 1)
-                printf("SUCCONF FUNCTION TO BE DEFINED\n");
-            else
-                printf("ERROR: SUCCONF needs 0 arguments\n");
-            break;
-        case 3:     // SUCC
-            if (args_num == 1 + 4)
-                printf("SUCC FUNCTION TO BE DEFINED\n");
-            else
-                printf("ERROR: SUCC needs 4 arguments\n");
-             break;
-        case 4:     // NEW
-            if (args_num == 1 + 4)
-                printf("NEW FUNCTION TO BE DEFINED\n");
-            else
-                printf("ERROR: NEW needs 4 arguments\n");
-             break;
-        default :   // incorrect command
-            printf("TCP command not recognized. Ignoring...\n");
-            break; 
-    }
 }
 
-int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *key,  char *name, char *ip, int *port){
+int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port){
     int num_args = 0;
-    char dummy[10];
+    char args[6][PARAM_SIZE];
     int i;
 
     //Find the end of message char (\n)
@@ -280,7 +245,6 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
             break;
         }
     }
-
 
     //If a \n hasn't been found
     if(i != -1){
@@ -297,29 +261,71 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
         }
     }
 
-
-    if((num_args = sscanf(active_node->buff, "%"PARAM_SIZE_STR"s %d %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %d %9s", command, key, name, ip, port, dummy)) == 6){
-        printf("TCP stream recieved has too many arguments\n");
-        return -2;
-    }
-    
+    //Here it is certain that we have a full message to work on, so we can clear the buffer associated with the active_node of the fd stack
     active_node->buff_avai_index = 0;
-    return num_args;
+
+    //Read the message's arguments
+    if((num_args = sscanf(active_node->buff, "%s %s %s %s %s %s", args[0], args[1], args[2], args[3], args[4], args[5])) == 6){
+        printf("TCP stream recieved has too many arguments\n");
+        return ERR_ARGS_TCP;
+    }
+
+    //Interpret the arguments and return the cmd_code or error
+    return getTcpCommandArgs((char**)args, num_args, first_int, second_int, ip, port);
+
 }
 
-int get_TCP_code (char *command) {
-	if (!strcmp(command, "FND"))
-		return 0;
-	else if (!strcmp(command, "KEY"))
-		return 1;
-	else if (!strcmp(command, "SUCCONF"))
-		return 2;
-	else if (!strcmp(command, "SUCC"))
-		return 3;
-	else if (!strcmp(command, "NEW"))
-		return 4;
-	else 	// invalid command
-		return -1;
+int getTcpCommandArgs(char** args, int num_args, int *first_int,  int* second_int, char *ip, int *port){
+    int cmd_code = ERR_ARGS_TCP;
+    int err = 0;
+
+	if(!strcmp(args[0], "FND")){
+        if(num_args != FND_NUM_ARGS+1){
+            return ERR_ARGS_TCP;
+        }
+        *first_int = atoi(args[1]);
+        *second_int = atoi(args[2]);
+        err = getIpFromArg(args[3], ip);
+        getPortFromArg(args[4], port);
+        cmd_code = FND;
+    }else if(!strcmp(args[0], "KEY")){
+        if(num_args != KEY_NUM_ARGS+1){
+            return ERR_ARGS_TCP;
+        }
+        *first_int = atoi(args[1]);
+        *second_int = atoi(args[2]);
+        err = getIpFromArg(args[3], ip);
+        getPortFromArg(args[4], port);
+        cmd_code = KEY;
+    }else if(!strcmp(args[0], "SUCCCONF")){
+        if(num_args != SUCCCONF_NUM_ARGS+1){
+            return ERR_ARGS_TCP;
+        }
+        cmd_code = SUCCCONF;
+    }else if(!strcmp(args[0], "SUCC")){
+        if(num_args != SUCC_NUM_ARGS+1){
+            return ERR_ARGS_TCP;
+        }
+        *first_int = atoi(args[1]);
+        err = getIpFromArg(args[2], ip);
+        getPortFromArg(args[3], port);
+        cmd_code = SUCC;
+    }else if(!strcmp(args[0], "NEW")){
+        if(num_args != NEW_NUM_ARGS+1){
+            return ERR_ARGS_TCP;
+        }
+        *first_int = atoi(args[1]);
+        err = getIpFromArg(args[2], ip);
+        getPortFromArg(args[3], port);
+        cmd_code = SUCC;
+    }else{
+        return 0;
+    }
+
+    if(err < 0){
+        return ERR_ARGS_TCP;
+    }
+    return cmd_code;
 }
 
 void listenHandler(void){

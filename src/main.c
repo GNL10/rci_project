@@ -18,9 +18,10 @@
 // fix bind error
 // atencao ao tamanho dos buffers a enviar
 // ciclo apos leitura de mensagens
-// ignore sigpipe
 // voltar ao menu 
 // ask what the succ (name) means, and define UPD_RCV_SIZE accordingly
+//Temos de verificar cenas que recebemos? tipo o key ser mt grande
+//É preciso verificar a dimensão da porta recebida?
 
 int fd_vec[NUM_FIXED_FD] = {0, 0, 0, 0, 0};
 Fd_Node* fd_stack = NULL;
@@ -32,6 +33,12 @@ int main(int argc, char const *argv[]){
 	char end_flag = 0;
 	int active_fd;
 	fd_set rd_set;			//read set
+
+	//Ignore SIGPIPE signal which is generated when program tries to write to a recently disconnected socket
+	if(signal(SIGPIPE, SIG_IGN) == SIG_ERR){	
+		fprintf(stderr, "Couldn't define signal handler\n");
+		exit(EXIT_FAILURE);
+	}
 
 	read_arguments(argc, (char**) argv);
 
@@ -46,6 +53,7 @@ int main(int argc, char const *argv[]){
 	fdInsertNode(fd_vec[STDIN_FD]);
 	active_fd = fd_vec[STDIN_FD];
 
+	//Main loop
 	while(!end_flag){
 		FD_ZERO(&rd_set);									// clear the descriptor set
 		fdSetAllSelect(&rd_set);

@@ -10,6 +10,7 @@
 extern int fd_vec[NUM_FIXED_FD];
 extern int PORT;
 extern char IP[];
+extern void (*forward_tcp_cmd[5])();
 
 // becomes ready to receive udp messages on sockfd
 int set_udp_server() {
@@ -215,7 +216,7 @@ void udpHandler(void) {
 }
 
 void tcpHandler(int sock_fd, Fd_Node* active_node){
-    int args_num, first_int, second_int, port;
+    int cmd_code, first_int, second_int, port;
     char ip[INET_ADDRSTRLEN], command[PARAM_SIZE];
     char read_buff[TCP_RCV_SIZE];
     int read_bytes = 0;
@@ -228,7 +229,16 @@ void tcpHandler(int sock_fd, Fd_Node* active_node){
         return;
     }
 
-    args_num = parseCommandTcp(active_node, read_buff, read_bytes, command, &first_int, &second_int, ip, &port);
+    if((cmd_code = parseCommandTcp(active_node, read_buff, read_bytes, command, &first_int, &second_int, ip, &port)) < 0){
+        if(cmd_code == ERR_INCOMP_MSG_TCP){
+            printf("Incomplete TCP message. Storing this partial message\n");
+        }else{
+            printf("Error in TCP message arguments. Message discarded\n");
+        }
+        return;
+    }
+
+    forward_tcp_cmd[cmd_code](first_int, ip, port, second_int);
 
 }
 

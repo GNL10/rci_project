@@ -28,6 +28,8 @@ Fd_Node* fd_stack = NULL;
 int PORT;
 char IP[16];
 
+void (*forward_tcp_cmd[5])() = {tcpFnd, tcpKey, tcpSucconf, tcpSucc, tcpNew};
+
 int main(int argc, char const *argv[]){
 	int max_numbered_fd;
 	char end_flag = 0;

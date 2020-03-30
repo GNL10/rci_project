@@ -14,6 +14,7 @@
 
 
 #define UPD_RCV_SIZE 1024
+//      TCP_RCV_SIZE is in file_descriptors.h
 
 #define ERR_ARGS_TCP -2                 //Error in arguments
 #define ERR_INCOMP_MSG_TCP -1           //Message incomplete
@@ -42,7 +43,7 @@ void udpHandler(void);
 void tcpHandler(int sock_fd, Fd_Node* active_node);
 
 int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port);
-int getTcpCommandArgs(char** args, int num_args, int *first_int,  int* second_int, char *ip, int *port);
+int getTcpCommandArgs(Fd_Node* active_node, char** args, int num_args, int *first_int,  int* second_int, char *ip, int *port);
 
 void listenHandler(void);
 

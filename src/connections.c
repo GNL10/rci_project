@@ -239,7 +239,6 @@ void tcpHandler(int sock_fd, Fd_Node* active_node){
     }
 
     forward_tcp_cmd[cmd_code](first_int, ip, port, second_int);
-
 }
 
 int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port){
@@ -274,21 +273,22 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
     //Here it is certain that we have a full message to work on, so we can clear the buffer associated with the active_node of the fd stack
     active_node->buff_avai_index = 0;
 
-    //Read the message's arguments
+    //Read the message's arguments and detects if there are more than the maximum allowed arguments
     if((num_args = sscanf(active_node->buff, "%s %s %s %s %s %s", args[0], args[1], args[2], args[3], args[4], args[5])) == 6){
         printf("TCP stream recieved has too many arguments\n");
         return ERR_ARGS_TCP;
     }
 
     //Interpret the arguments and return the cmd_code or error
-    return getTcpCommandArgs((char**)args, num_args, first_int, second_int, ip, port);
+    return getTcpCommandArgs(active_node, (char**)args, num_args, first_int, second_int, ip, port);
 
 }
 
-int getTcpCommandArgs(char** args, int num_args, int *first_int,  int* second_int, char *ip, int *port){
+int getTcpCommandArgs(Fd_Node* active_node, char** args, int num_args, int *first_int,  int* second_int, char *ip, int *port){
     int cmd_code = ERR_ARGS_TCP;
     int err = 0;
 
+    //Poll cmd and assign arguments
 	if(!strcmp(args[0], "FND")){
         if(num_args != FND_NUM_ARGS+1){
             return ERR_ARGS_TCP;
@@ -325,6 +325,7 @@ int getTcpCommandArgs(char** args, int num_args, int *first_int,  int* second_in
             return ERR_ARGS_TCP;
         }
         *first_int = atoi(args[1]);
+        *second_int = active_node->fd;      //Not an argument from message. It is for destinguish who is sending this message
         err = getIpFromArg(args[2], ip);
         getPortFromArg(args[3], port);
         cmd_code = SUCC;

@@ -46,6 +46,6 @@ void tcpSucc(int new_succ_sv, char* new_succ_ip, int new_succ_port){
 
 }
 
-void tcpNew(int entry_key_sv, char* entry_ip, int entry_port){
+void tcpNew(int entry_key_sv, char* entry_ip, int entry_port, int sender_fd){
 
 }

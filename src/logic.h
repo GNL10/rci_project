@@ -4,10 +4,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "io.h"
 
-
-void entry (int key, char *name, char *ip, int port);
-int parse_command (char *str, char *command, int *key,  char *name, char *ip, int *port);
+void init_serv_vec();
+void new_stdin (cmd_struct *cmd);
+void entry (cmd_struct *cmd);
+void sentry (cmd_struct *cmd);
+void leave();
+void show();
+void find (cmd_struct *cmd);
 
 void tcpFnd(int key, char* starting_ip, int starting_port, int starting_sv);
 void tcpKey(int key, char* owner_ip, int owner_port, int owner_of_key_sv);

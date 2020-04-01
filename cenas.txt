@@ -8,5 +8,20 @@ SUCC succ succ.IP succ.port\n
 
 NEW i i.IP i.port\n
 
+rever funçoes de leitura de strings do tcp com o melo
+    -why sscanf == 6 linha  275
+
+
+// fix bind error
+// atencao ao tamanho dos buffers a enviar
+// ciclo apos leitura de mensagens
+//Temos de verificar cenas que recebemos? tipo o key ser mt grande
+//É preciso verificar a dimensão da porta recebida?
+// port 4000a0 é suposto considerar 4000 ?
+// que acontece se tentar entrar no ring com uma chave pertencente a outro cliente ???
+// comando new tem que dar delete aos outros, caso ja exista um anel ?
+// temos que fazer alguma verficacao no comando sentry?
+// UDP receive size???
+
 //TESTES A FAZER:
 -Um cliente mandar milhões de bytes sem nunca mandar um \n

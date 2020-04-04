@@ -19,6 +19,7 @@ void read_arguments(int argc, char *argv[]) {
 		printf("ERROR: IP ADDRESS IS NOT VALID!\n");
 		exit(1);
 	}
+	// argv[1] max size is tested in validate_ip
 	strcpy(serv_vec[SELF].ip, argv[1]);
 
 	sscanf(argv[2], "%d", &port_temp); // check for sscanf errors if needed

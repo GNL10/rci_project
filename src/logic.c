@@ -69,9 +69,11 @@ void entry (cmd_struct *cmd) {
 }
 
 /*  sentry
-
+    enters in a ring without performing the search for a key
+    returns early if any error occurs
 */
 void sentry (cmd_struct *cmd) {
+
     if (cmd->args_n < SENTRY_NUM_ARGS+1) {
         printf("The sentry command needs 4 arguments\nUsage: sentry <key> <key_2> <ip> <port>\n\n");
         return;
@@ -80,12 +82,17 @@ void sentry (cmd_struct *cmd) {
         printf("This server already belongs to a ring, must leave first!\n\n");
         return;
     }
-    // TODO must make tcp connection
+
+    if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(cmd)) == -1)
+        return;
+
+    if (write_n(fd_vec[SUCCESSOR_FD], "SUCCONF\n") == -1)
+        return;
+
     serv_vec[SELF].key = cmd->key;
     serv_vec[SUCC1].key = cmd->key_2;
     strcpy(serv_vec[SUCC1].ip, cmd->ip);
     serv_vec[SUCC1].port = cmd->port;
-
 }
 
 /*  leave

@@ -52,7 +52,7 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     int sockfd, n;
     struct addrinfo hints, *res;
     struct timeval timeout={RECV_TIMEOUT,0}; //set timeout
-    char port_str[5];
+    char port_str[PORT_STR_SIZE];
     struct sockaddr_in serv_addr;
     socklen_t addr_len;
 
@@ -265,6 +265,7 @@ void tcpHandler(int sock_fd, Fd_Node* active_node){
         close(sock_fd);
         return;
     }
+    printf("[TCP] Read:%s\n", read_buff);
 
     if((cmd_code = parseCommandTcp(active_node, read_buff, read_bytes, command, &first_int, &second_int, ip, &port)) < 0){
         if(cmd_code == ERR_INCOMP_MSG_TCP){
@@ -386,4 +387,65 @@ void listenHandler(void){
         exit(-1);
 	}
     fdInsertNode(new_fd);
+}
+
+/*  tcp_client
+    connects a tcp client so the server given on the command
+    adds the socket to fd_vec[index]
+    returns: -1 if error occurred
+              sockfd if successful
+*/
+int init_tcp_client(cmd_struct *cmd) {
+    struct addrinfo hints,*res;
+    int sockfd;
+    char port_str[PORT_STR_SIZE];
+
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);    // TCP socket
+    if (sockfd == -1) { 
+        printf("[init_tcp_client] ERROR: SOCKET CREATION FAILED\n"); 
+        return -1;
+    }
+    
+    memset(&hints,0,sizeof hints);
+    hints.ai_family=AF_INET;//IPv4
+    hints.ai_socktype=SOCK_STREAM;//TCP socket
+
+    sprintf(port_str, "%d", cmd->port);
+    if (getaddrinfo(cmd->ip, port_str, &hints, &res) != 0){
+        printf("[init_tcp_client] ERROR: GETADDRINFO FAILED\n");
+        return -1;
+    }
+    if (connect(sockfd,res->ai_addr,res->ai_addrlen) == -1){
+        printf("[init_tcp_client] ERROR: CONNECT FAILED\n");
+        return -1;
+    }
+    printf("[init_tcp_client] Client successfully connected\n");
+    return sockfd;
+}
+
+
+/*  write_n
+    writes to socket the input message
+    returns: 0 in case of success
+             -1 in case of error
+*/ 
+int write_n (int fd, char *message) {
+    char *ptr, buffer[BUFFER_SIZE];
+    ssize_t n_left = strlen(message), n_written;
+
+    if (n_left > BUFFER_SIZE) {
+        return -1;
+    }
+    ptr = strcpy(buffer, message);
+
+    while (n_left > 0) {
+        n_written = write(fd, buffer, n_left);
+        if (n_written == -1) {
+            printf("[write_n] ERROR: WRITE FAILED\n");
+            return -1;
+        }
+        n_left -= n_written;
+        ptr += n_written;
+    }
+    return 0;
 }

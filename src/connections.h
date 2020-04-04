@@ -11,32 +11,16 @@
 #include <unistd.h> 
 
 #include "file_descriptors.h"
+#include "io.h"
 
-
-#define UPD_RCV_SIZE 33 // strlen (EKEY 11 12 123.123.123.123 11111\0) = 33! biggest udp message that can be sent
+#define UPD_RCV_SIZE 64 
 //      TCP_RCV_SIZE is in file_descriptors.h
+
+#define PORT_STR_SIZE 6
 
 #define ERR_ARGS_TCP -2                 //Error in arguments
 #define ERR_INCOMP_MSG_TCP -1           //Message incomplete
 #define RECV_TIMEOUT 3 // seconds
-
-// STDIN
-#define NEW_STDIN_NUM_ARGS 1
-#define ENTRY_NUM_ARGS 4
-#define SENTRY_NUM_ARGS 4
-#define LEAVE_NUM_ARGS 0
-#define SHOW_NUM_ARGS 0
-#define FIND_NUM_ARGS 1
-#define EXIT_NUM_ARGS 0
-
-#define NEW_STDIN 0
-#define ENTRY 1
-#define SENTRY 2
-#define LEAVE 3
-#define SHOW 4
-#define FIND 5
-#define EXIT 6
-
 
 // TCP
 #define FND_NUM_ARGS 4
@@ -65,6 +49,7 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
 int getTcpCommandArgs(Fd_Node* active_node, char** args, int num_args, int *first_int,  int* second_int, char *ip, int *port);
 
 void listenHandler(void);
+int init_tcp_client(cmd_struct *cmd);
 
-
+int write_n (int fd, char *message);
 #endif

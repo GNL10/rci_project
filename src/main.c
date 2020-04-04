@@ -26,12 +26,15 @@ int main(int argc, char const *argv[]){
 	char end_flag = 0;
 	int active_fd;
 	fd_set rd_set;			//read set
+	struct sigaction action;
 
-	//Ignore SIGPIPE signal which is generated when program tries to write to a recently disconnected socket
-	if(signal(SIGPIPE, SIG_IGN) == SIG_ERR){	
-		fprintf(stderr, "Couldn't define signal handler\n");
+	memset(&action, 0, sizeof(action));
+	action.sa_handler = SIG_IGN;
+	if (sigaction(SIGPIPE, &action, NULL) == -1) {
+		printf("ERROR: sigaction failed!");
 		exit(EXIT_FAILURE);
 	}
+
 	init_serv_vec();	// initializes the vector's keys to -1
 
 	read_arguments(argc, (char**) argv);

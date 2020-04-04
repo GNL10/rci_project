@@ -8,11 +8,27 @@
 #include <sys/select.h>
 #include <netinet/in.h>
 
-#include "connections.h"
 
 #define BUFFER_SIZE 64
 #define PARAM_SIZE 10       // must be PARAM_SIZE_STR + 1 !!
 #define PARAM_SIZE_STR "9" // must be PARAM_SIZE - 1 !!
+
+// STDIN
+#define NEW_STDIN_NUM_ARGS 1
+#define ENTRY_NUM_ARGS 4
+#define SENTRY_NUM_ARGS 4
+#define LEAVE_NUM_ARGS 0
+#define SHOW_NUM_ARGS 0
+#define FIND_NUM_ARGS 1
+#define EXIT_NUM_ARGS 0
+
+#define NEW_STDIN 0
+#define ENTRY 1
+#define SENTRY 2
+#define LEAVE 3
+#define SHOW 4
+#define FIND 5
+#define EXIT 6
 
 typedef struct {
     char action[PARAM_SIZE];

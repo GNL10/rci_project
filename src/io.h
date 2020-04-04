@@ -50,7 +50,7 @@ typedef struct {
     int key;
     char ip[INET_ADDRSTRLEN];
     int port;
-} server_info;
+}server_info;
 
 
 

@@ -282,6 +282,7 @@ void tcpHandler(int sock_fd, Fd_Node* active_node){
 int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port){
     int num_args = 0;
     char args[6][PARAM_SIZE];
+    char* working_buff;
     int i;
 
     //Find the end of message char (\n)
@@ -299,30 +300,35 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
         return ERR_INCOMP_MSG_TCP;
     }
 
-    //If there's part of a message in the fd buffer
+    //If there's part of a message in the active_node->buffer, append the newly recieved partial message to it
     if(active_node->buff_avai_index){
         active_node->buff_avai_index = appendVector(read_buff, active_node->buff, active_node->buff_avai_index, read_bytes);        //Store the message in fd buffer
         if(active_node->buff_avai_index == TCP_RCV_SIZE){           //If buffer is full
             active_node->buff_avai_index = 0;
             return ERR_ARGS_TCP;                                     //The message is too big, hence is invalid
         }
+        //Here it is certain that we have a full message to work on, so we can clear the buffer associated with the active_node of the fd stack
+        active_node->buff_avai_index = 0;
+        working_buff = active_node->buff;
+    }else{  //If the newly message recieved is completed, then the working_buff is the read_buff
+        working_buff = read_buff;
     }
-
-    //Here it is certain that we have a full message to work on, so we can clear the buffer associated with the active_node of the fd stack
-    active_node->buff_avai_index = 0;
 
     //Read the message's arguments and detects if there are more than the maximum allowed arguments
-    if((num_args = sscanf(active_node->buff, "%"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s", args[0], args[1], args[2], args[3], args[4], args[5])) == 6){
+    if((num_args = sscanf(working_buff, "%s %s %s %s %s %s", args[0], args[1], args[2], args[3], args[4], args[5])) == 6){
         printf("TCP stream recieved has too many arguments\n");
         return ERR_ARGS_TCP;
-    }
+    }else if(num_args <= 0){
+        printf("TCP stream recieved is faulty\n");
+        return ERR_ARGS_TCP;
+    }//TODO VERIFICAR O TAMANHO DE CADA ARGUMENTO RECEBIDO
 
     //Interpret the arguments and return the cmd_code or error
-    return getTcpCommandArgs(active_node, (char**)args, num_args, first_int, second_int, ip, port);
+    return getTcpCommandArgs(active_node, args, num_args, first_int, second_int, ip, port);
 
 }
 
-int getTcpCommandArgs(Fd_Node* active_node, char** args, int num_args, int *first_int,  int* second_int, char *ip, int *port){
+int getTcpCommandArgs(Fd_Node* active_node, char args[][PARAM_SIZE], int num_args, int *first_int,  int* second_int, char *ip, int *port){
     int cmd_code = ERR_ARGS_TCP;
     int err = 0;
 

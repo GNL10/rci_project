@@ -1,7 +1,5 @@
-#define _POSIX_C_SOURCE 200112L // to fix compile error in ide compiler (netdb.h library), gcc does not need it!
 #include <sys/time.h>
 #include <netdb.h>
-
 #include "connections.h"
 #include "logic.h"
 #include "io.h"

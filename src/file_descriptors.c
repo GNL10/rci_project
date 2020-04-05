@@ -1,11 +1,12 @@
 #include "file_descriptors.h"
+#include "string.h"
 
 extern Fd_Node* fd_stack;
 
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
 //Inserts a new node in the head of the fd stack
-void fdInsertNode(int fd){
+void fdInsertNode(int fd, char ip[], int port){
     Fd_Node* new_node = NULL;
 
     new_node = (Fd_Node*)malloc(sizeof(Fd_Node));
@@ -16,6 +17,8 @@ void fdInsertNode(int fd){
     new_node->fd = fd;
     new_node->buff[0] = '\0';
     new_node->buff_avai_index = 0;
+    new_node->port = port;
+    strcpy(new_node->ip, ip);
 
     new_node->prev = NULL;
     new_node->next = fd_stack;

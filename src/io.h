@@ -47,13 +47,11 @@ typedef struct {
 #define SERVERS_NUM 3   // number of servers in server_vec
 
 typedef struct {
-    int key;
     char ip[INET_ADDRSTRLEN];
+    int key;
     int port;
-} server_info;
-
-
-
+    
+}server_info;
 
 void read_arguments(int argc, char *argv[]);
 

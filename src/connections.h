@@ -46,7 +46,7 @@ void udpHandler(void);
 void tcpHandler(int sock_fd, Fd_Node* active_node);
 
 int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port);
-int getTcpCommandArgs(Fd_Node* active_node, char** args, int num_args, int *first_int,  int* second_int, char *ip, int *port);
+int getTcpCommandArgs(Fd_Node* active_node, char args[][PARAM_SIZE], int num_args, int *first_int,  int* second_int, char *ip, int *port);
 
 void listenHandler(void);
 int init_tcp_client(cmd_struct *cmd);

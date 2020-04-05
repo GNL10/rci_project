@@ -1,6 +1,6 @@
 #include "logic.h"
 #include "connections.h"
-#include "file_descriptors.h"
+
 #include "io.h"
 
 
@@ -138,22 +138,22 @@ void find (cmd_struct *cmd) {
 // TCP functions ----------------------------------------------------
 // ------------------------------------------------------------------
 
-void tcpFnd(int key, char* starting_ip, int starting_port, int starting_sv){
+void tcpFnd(Fd_Node* active_node, int key, char* starting_ip, int starting_port, int starting_sv){
 
 }
 
-void tcpKey(int key, char* owner_ip, int owner_port, int owner_of_key_sv){
+void tcpKey(Fd_Node* active_node, int key, char* owner_ip, int owner_port, int owner_of_key_sv){
 
 }
 
-void tcpSucconf(void){
+void tcpSucconf(Fd_Node* active_node){
 
 }
 
-void tcpSucc(int new_succ_sv, char* new_succ_ip, int new_succ_port){
+void tcpSucc(Fd_Node* active_node, int new_succ_sv, char* new_succ_ip, int new_succ_port){
 
 }
 
-void tcpNew(int entry_key_sv, char* entry_ip, int entry_port, int sender_fd){
+void tcpNew(Fd_Node* active_node, int entry_key_sv, char* entry_ip, int entry_port, int sender_fd){
 
 }

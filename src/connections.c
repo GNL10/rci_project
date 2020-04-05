@@ -267,6 +267,7 @@ void tcpHandler(int sock_fd, Fd_Node* active_node){
     }
     printf("[TCP] Read:%s\n", read_buff);
 
+    //Interpret and extract the command and its arguments
     if((cmd_code = parseCommandTcp(active_node, read_buff, read_bytes, command, &first_int, &second_int, ip, &port)) < 0){
         if(cmd_code == ERR_INCOMP_MSG_TCP){
             printf("Incomplete TCP message. Storing this partial message\n");
@@ -276,7 +277,8 @@ void tcpHandler(int sock_fd, Fd_Node* active_node){
         return;
     }
 
-    forward_tcp_cmd[cmd_code](first_int, ip, port, second_int);
+    //Forward to the corresponding command handler function
+    forward_tcp_cmd[cmd_code](active_node, first_int, ip, port, second_int);
 }
 
 int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port){
@@ -309,7 +311,7 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
         }
         //Here it is certain that we have a full message to work on, so we can clear the buffer associated with the active_node of the fd stack
         active_node->buff_avai_index = 0;
-        working_buff = active_node->buff;
+        working_buff = active_node->buff;       //The working_buff is this one because this buffer has the complete message
     }else{  //If the newly message recieved is completed, then the working_buff is the read_buff
         working_buff = read_buff;
     }
@@ -369,7 +371,6 @@ int getTcpCommandArgs(Fd_Node* active_node, char args[][PARAM_SIZE], int num_arg
             return ERR_ARGS_TCP;
         }
         *first_int = atoi(args[1]);
-        *second_int = active_node->fd;      //Not an argument from message. It is for distinguish who is sending this message
         err = getIpFromArg(args[2], ip);
         getPortFromArg(args[3], port);
         cmd_code = SUCC;
@@ -392,7 +393,8 @@ void listenHandler(void){
         perror("accept");
         exit(-1);
 	}
-    fdInsertNode(new_fd);
+
+    fdInsertNode(new_fd, inet_ntoa(new_addr.sin_addr), ntohs(new_addr.sin_port));
 }
 
 /*  tcp_client

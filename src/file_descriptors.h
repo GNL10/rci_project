@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/select.h>
+#include <arpa/inet.h>
 
 #define NUM_FIXED_FD 5
 
@@ -21,9 +22,11 @@ typedef struct Fd_Node_Struct{
     struct Fd_Node_Struct* prev;
     int fd;
     int buff_avai_index;            //First index avaiable in buff
+    char ip[INET_ADDRSTRLEN];
+    int port;
 }Fd_Node;
 
-void fdInsertNode(int fd);
+void fdInsertNode(int fd, char ip[], int port);
 void fdDeleteNode(Fd_Node* del_node);
 void fdDeleteStack(void);
 void fdDeleteFd(int del_fd);

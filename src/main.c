@@ -44,9 +44,9 @@ int main(int argc, char const *argv[]){
 	fd_vec[UDP_FD] = set_udp_server();			//Setup udp server
 
 	//Insert current active sockets into fd stack
-	fdInsertNode(fd_vec[LISTEN_FD]);
-	fdInsertNode(fd_vec[UDP_FD]);
-	fdInsertNode(fd_vec[STDIN_FD]);
+	fdInsertNode(fd_vec[LISTEN_FD], "\0", 0);
+	fdInsertNode(fd_vec[UDP_FD], "\0", 0);
+	fdInsertNode(fd_vec[STDIN_FD], "\0", 0);
 	active_fd = fd_vec[STDIN_FD];
 
 	//Main loop

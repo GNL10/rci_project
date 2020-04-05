@@ -18,7 +18,7 @@ Fd_Node* fd_stack = NULL;
 
 server_info serv_vec[SERVERS_NUM];
 
-void (*forward_tcp_cmd[5])() = {tcpFnd, tcpKey, tcpSucconf, tcpSucc, tcpNew};
+void (*forward_tcp_cmd[5])() = {tcpFnd, tcpKey, tcpSuccconf, tcpSucc, tcpNew};
 
 int main(int argc, char const *argv[]){
 	int max_numbered_fd;

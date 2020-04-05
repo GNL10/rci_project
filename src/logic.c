@@ -75,9 +75,11 @@ void entry (cmd_struct *cmd) {
 
 /*  sentry
     enters in a ring without performing the search for a key
+    snends <NEW i i.IP i.port\n >
     returns early if any error occurs
 */
 void sentry (cmd_struct *cmd) {
+    char message[TCP_RCV_SIZE];// TODO change the size
 
     if (cmd->args_n < SENTRY_NUM_ARGS+1) {
         printf("The sentry command needs 4 arguments\nUsage: sentry <key> <key_2> <ip> <port>\n\n");
@@ -91,7 +93,8 @@ void sentry (cmd_struct *cmd) {
     if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(cmd)) == -1)
         return;
 
-    if (write_n(fd_vec[SUCCESSOR_FD], "SUCCONF\n") == -1)
+    sprintf(message, "NEW %d %s %d\n", cmd->key, serv_vec[SELF].ip, serv_vec[SELF].port);
+    if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
         return;
 
     serv_vec[SELF].key = cmd->key;
@@ -146,8 +149,11 @@ void tcpKey(Fd_Node* active_node, int key, char* owner_ip, int owner_port, int o
 
 }
 
-void tcpSucconf(Fd_Node* active_node){
-
+/*  tcpSuccconf
+    predecessor must now be changed
+*/
+void tcpSuccconf(Fd_Node* active_node){
+    fd_vec[PREDECESSOR_FD] = active_node->fd;
 }
 
 void tcpSucc(Fd_Node* active_node, int new_succ_sv, char* new_succ_ip, int new_succ_port){
@@ -155,5 +161,5 @@ void tcpSucc(Fd_Node* active_node, int new_succ_sv, char* new_succ_ip, int new_s
 }
 
 void tcpNew(Fd_Node* active_node, int entry_key_sv, char* entry_ip, int entry_port, int sender_fd){
-
+    printf("NEW %d %s %d\n", entry_key_sv, entry_ip, entry_port);
 }

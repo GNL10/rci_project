@@ -373,7 +373,7 @@ int getTcpCommandArgs(Fd_Node* active_node, char args[][PARAM_SIZE], int num_arg
         *first_int = atoi(args[1]);
         err = getIpFromArg(args[2], ip);
         getPortFromArg(args[3], port);
-        cmd_code = SUCC;
+        cmd_code = NEW;
     }else{
         return 0;
     }
@@ -389,7 +389,7 @@ void listenHandler(void){
     struct sockaddr_in new_addr;
     socklen_t size_addr = 0;
 
-    if((new_fd = accept(fd_vec[LISTEN_FD], (struct sockaddr*)&new_addr, &size_addr)) == -1){	    //Verficiar se não houve erro a fazer accept
+    if((new_fd = accept(fd_vec[LISTEN_FD], (struct sockaddr*)&new_addr, &size_addr)) == -1){	    //Verficar se não houve erro a fazer accept
         perror("accept");
         exit(-1);
 	}

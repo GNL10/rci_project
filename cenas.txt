@@ -21,9 +21,7 @@ rever funçoes de leitura de strings do tcp com o melo
 
 // comando new tem que dar delete aos outros, caso ja exista um anel ? nao posso fazer new estou no anel
 // temos que fazer alguma verficacao no comando sentry? fechar sessao
-
-strcpy?
-// write como esta na teoria ? fazer os ciclos como esta na teoria !!!!!! nova funcao write_n
+// abrir as conexoes de TCP mais tarde, maybe?
 timeout no select as vezes
 
 //TESTES A FAZER:

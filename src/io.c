@@ -21,7 +21,6 @@ void read_arguments(int argc, char *argv[]) {
 	}
 	// argv[1] max size is tested in validate_ip
 	strcpy(serv_vec[SELF].ip, argv[1]);
-
 	sscanf(argv[2], "%d", &port_temp); // check for sscanf errors if needed
 	if (validate_port(port_temp) == 0) {
 		printf("ERROR: PORT IS NOT VALID!\n");

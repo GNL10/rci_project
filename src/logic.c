@@ -15,6 +15,7 @@ void init_serv_vec() {
         serv_vec[i].key = -1;
 }
 
+
 /*  new_stdin
     creates a new ring with only the server key
 */
@@ -38,6 +39,10 @@ void entry (cmd_struct *cmd) {
 
     if (cmd->args_n < ENTRY_NUM_ARGS+1) {
         printf("The entry command needs 4 arguments\nUsage: entry <key> <key_2> <ip> <port>\n\n");
+        return;
+    }
+    if (serv_vec[SELF].key != -1 || serv_vec[SUCC1].key != -1 || serv_vec[SUCC2].key != -1) {
+        printf("[new_stdin] ERROR: SERVER STILL BELONGS TO RING\n\n");
         return;
     }
     
@@ -100,6 +105,10 @@ void sentry (cmd_struct *cmd) {
     sets all keys to -1
 */
 void leave() {
+    if (serv_vec[SELF].key == -1) {
+        printf("This server does not belong to a ring!\n\n");
+        return;
+    }
     // must disconnect TCP connections
     init_serv_vec();    // sets all keys to -1
 }

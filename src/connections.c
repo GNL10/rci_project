@@ -430,16 +430,16 @@ int init_tcp_client(cmd_struct *cmd) {
              -1 in case of error
 */ 
 int write_n (int fd, char *message) {
-    char *ptr, buffer[BUFFER_SIZE];
+    char *ptr;
     ssize_t n_left = strlen(message), n_written;
 
     if (n_left > BUFFER_SIZE) {
         return -1;
     }
-    ptr = strcpy(buffer, message);
+    ptr = message;
 
     while (n_left > 0) {
-        n_written = write(fd, buffer, n_left);
+        n_written = write(fd, message, n_left);
         if (n_written == -1) {
             printf("[write_n] ERROR: WRITE FAILED\n");
             return -1;

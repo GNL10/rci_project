@@ -368,9 +368,22 @@ int getTcpCommandArgs(Fd_Node* active_node, char args[][PARAM_SIZE], int num_arg
         if(num_args != NEW_NUM_ARGS+1){
             return ERR_ARGS_TCP;
         }
-        *first_int = atoi(args[1]);
-        err = getIpFromArg(args[2], ip);
-        getPortFromArg(args[3], port);
+        *first_int = atoi(args[1]); // TODO VALIDATE KEY
+        //err = getIpFromArg(args[2], ip);
+        if(validate_ip(args[2]) == 0) { // invalid ip
+            printf("[getTcpCommandArgs] ERROR invalid ip\n");
+            return ERR_ARGS_TCP;
+        }
+        strcpy(ip, args[2]);
+        if (sscanf(args[3], "%d", port) == -1){ // check for sscanf errors if needed
+		    printf("ERROR: SSCANF FOR PORT FAILED!\n");
+		    return ERR_ARGS_TCP;
+	    }
+	    if (validate_port(*port) == 0) {
+		    printf("ERROR: PORT IS NOT VALID!\n");
+		    return ERR_ARGS_TCP;
+	    }
+        //getPortFromArg(args[3], port);
         cmd_code = NEW;
     }else{
         return 0;
@@ -401,7 +414,7 @@ void listenHandler(void){
     returns: -1 if error occurred
               sockfd if successful
 */
-int init_tcp_client(cmd_struct *cmd) {
+int init_tcp_client(char ip[], int port) {
     struct addrinfo hints,*res;
     int sockfd;
     char port_str[PORT_STR_SIZE];
@@ -416,8 +429,8 @@ int init_tcp_client(cmd_struct *cmd) {
     hints.ai_family=AF_INET;//IPv4
     hints.ai_socktype=SOCK_STREAM;//TCP socket
 
-    sprintf(port_str, "%d", cmd->port);
-    if (getaddrinfo(cmd->ip, port_str, &hints, &res) != 0){
+    sprintf(port_str, "%d", port);
+    if (getaddrinfo(ip, port_str, &hints, &res) != 0){
         printf("[init_tcp_client] ERROR: GETADDRINFO FAILED\n");
         return -1;
     }
@@ -425,6 +438,7 @@ int init_tcp_client(cmd_struct *cmd) {
         printf("[init_tcp_client] ERROR: CONNECT FAILED\n");
         return -1;
     }
+    fdInsertNode(sockfd, "TODO", 5555);
     printf("[init_tcp_client] Client successfully connected\n");
     return sockfd;
 }

@@ -49,7 +49,7 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
 int getTcpCommandArgs(Fd_Node* active_node, char args[][PARAM_SIZE], int num_args, int *first_int,  int* second_int, char *ip, int *port);
 
 void listenHandler(void);
-int init_tcp_client(cmd_struct *cmd);
+int init_tcp_client(char ip[], int port);
 
 int write_n (int fd, char *message);
 #endif

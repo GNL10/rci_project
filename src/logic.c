@@ -179,8 +179,9 @@ void tcpNew(Fd_Node* active_node, int entry_key_sv, char* entry_ip, int entry_po
         fd_vec[PREDECESSOR_FD] = active_node->fd;
         if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(entry_ip, entry_port)) == -1)
             return; //TODO CHECK WHAT TO DO IF THIS FAILS
-        //send new succ1 SUCCONF
-        sprintf(message, "SUCCONF\n");
+        //send new succ1 SUCCCONF
+        printf("sent new successor, a succconf\n");
+        sprintf(message, "SUCCCONF\n");
         if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
             return; //TODO
 
@@ -203,8 +204,8 @@ void tcpNew(Fd_Node* active_node, int entry_key_sv, char* entry_ip, int entry_po
         //init connection with new node as succ1
         if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(entry_ip, entry_port)) == -1)
             return; //TODO CHECK WHAT TO DO IF THIS FAILS
-        //send new succ1 SUCCONF
-        sprintf(message, "SUCCONF\n");
+        //send new succ1 SUCCCONF
+        sprintf(message, "SUCCCONF\n");
         if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
             return; //TODO
         //if predecessor exists

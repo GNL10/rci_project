@@ -9,6 +9,189 @@ extern int fd_vec[NUM_FIXED_FD];
 extern void (*forward_tcp_cmd[5])();
 
 extern server_info serv_vec[];
+extern int key_flag;
+
+struct sockaddr_in udp_cli_addr;    // address of udp client
+
+
+
+// ------------------------------------------------------------------
+// HANDLERS ---------------------------------------------------------
+// ------------------------------------------------------------------
+
+/*  forwardHandler
+    multiplexes the functions, depending on the active_fd
+    returns: 0 if the program is to continue
+             1 if the program is to end
+*/
+int forwardHandler(int active_fd){
+    Fd_Node* found_node;
+
+    if(active_fd == fd_vec[LISTEN_FD]){
+        listenHandler();
+    }else if(active_fd == fd_vec[UDP_FD]){
+        udpHandler();
+    }else if(active_fd == fd_vec[STDIN_FD]){
+        return stdinHandler();
+    }else{              //Generic TCP incoming message
+        found_node = fdFindNode(active_fd);
+        tcpHandler(active_fd, found_node);
+    }
+    return 0;   // TODO delete!    
+}
+
+/*  stdinHandler
+    Handles all commands given by the standard input
+    reads command, parses it and validates the parameters
+    returns: 0 if the program is to continue
+             1 if the program is to end
+*/
+int stdinHandler() {
+    char command_line[BUFFER_SIZE];
+    cmd_struct cmd;
+
+    read_command_line(command_line);
+    parse_command(command_line, &cmd);
+    validate_parameters(&cmd); // args_num becomes number of valid parameters!
+    switch(get_command_code(cmd.action)) {
+        case NEW_STDIN:     // new
+            new_stdin(&cmd);
+            break;
+
+        case ENTRY:     // entry
+            entry(&cmd);
+            break;
+
+        case SENTRY:     // sentry
+            sentry(&cmd);
+            break;
+
+        case LEAVE:     // leave
+            leave();
+            break;
+
+        case SHOW:     // show
+            show();
+            break;
+
+        case FIND:     // find
+            find(&cmd);
+            break;
+
+        case EXIT:    // exit
+            return 1;   // changes end flag to 1 when returned
+            break;
+
+        default :   // incorrect command
+            printf("Command not recognized\n");
+            printf("Available commands:\n");
+            printf("\tnew <key>\n\tentry <key> <key_2> <ip> <port>\n");
+            printf("\tsentry <key> <key_2> <ip> <port>\n\tleave\n\tshow\n\tfind <key>\n\texit\n\n\n");
+            break;     
+    }
+    return 0;
+}
+
+/*  udpHandler
+    Handles incoming udp messages
+    validates incoming message (expects: EFND key)
+    initiates the search for the key
+*/
+void udpHandler(void) {
+    char message[UPD_RCV_SIZE];
+    int n;
+    socklen_t len;
+    cmd_struct recv_cmd;
+
+    memset(&udp_cli_addr, 0, sizeof(udp_cli_addr));
+    len = sizeof(udp_cli_addr);
+
+    if ((n = recvfrom(fd_vec[UDP_FD], (char *)message, BUFFER_SIZE, MSG_WAITALL, (struct sockaddr *) &udp_cli_addr, &len)) <= 0) {
+        perror("[udpHandler] ERROR: recvfrom");
+        return;
+    }
+    message[n] = '\0';
+    printf("[UDP] message was received: %s\n", message);
+    if (parse_command(message, &recv_cmd) <= 1){
+        printf("[UDP] WRONG MESSAGE: %s\n", message);
+        return;
+    }
+    if ((validate_parameters(&recv_cmd) != 2) || strcmp(recv_cmd.action, "EFND") != 0) {
+        printf("[UDP] WRONG MESSAGE: %s\n", message);
+        return;
+    }
+    printf("[UDP] Recv: %s", message);
+
+    if (serv_vec[SUCC1].key == -1) {
+        printf("SERVER IS ALONE IN RING, SENDING ITS OWN INFORMATION\n");
+        sprintf(message, "EKEY %d %d %s %d", recv_cmd.key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
+        sendto(fd_vec[UDP_FD], (const char *)message, strlen(message), 
+                MSG_CONFIRM, (const struct sockaddr *) &udp_cli_addr,  
+                sizeof(udp_cli_addr));
+    }
+    if (key_in_succ(recv_cmd.key) == 1) {   // if key is in successor answer right away
+        sprintf(message, "EKEY %d %d %s %d", recv_cmd.key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
+        sendto(fd_vec[UDP_FD], (const char *)message, strlen(message), 
+                MSG_CONFIRM, (const struct sockaddr *) &udp_cli_addr,  
+                sizeof(udp_cli_addr));
+        return;
+    }
+    
+    key_flag = KEY_FLAG_UDP;
+    // key is not in successor... Initiating find process
+    sprintf(message, "FND %d %d %s %d\n", recv_cmd.key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
+    printf("[TCP] Sent: %s\n", message);
+    if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
+        return;
+}
+
+
+void tcpHandler(int sock_fd, Fd_Node* active_node){
+    int cmd_code, first_int, second_int, port;
+    char ip[INET_ADDRSTRLEN], command[PARAM_SIZE];
+    char read_buff[TCP_RCV_SIZE];
+    int read_bytes = 0;
+
+    if((read_bytes = read(sock_fd, read_buff, TCP_RCV_SIZE) )<= 0){
+        printf("Client %d disconnected abruptly\n", sock_fd);
+        //TODO send message to another node that needs to be disconnected
+        fdDeleteFd(sock_fd);
+        close(sock_fd);
+        return;
+    }
+    printf("[TCP] Read:%s\n", read_buff);
+
+    //Interpret and extract the command and its arguments
+    if((cmd_code = parseCommandTcp(active_node, read_buff, read_bytes, command, &first_int, &second_int, ip, &port)) < 0){
+        if(cmd_code == ERR_INCOMP_MSG_TCP){
+            printf("Incomplete TCP message. Storing this partial message\n");
+        }else{
+            printf("Error in TCP message arguments. Message discarded\n");
+        }
+        return;
+    }
+
+    //Forward to the corresponding command handler function
+    forward_tcp_cmd[cmd_code](active_node, first_int, ip, port, second_int);
+}
+
+void listenHandler(void){
+    int new_fd;
+    struct sockaddr_in new_addr;
+    socklen_t size_addr = 0;
+
+    if((new_fd = accept(fd_vec[LISTEN_FD], (struct sockaddr*)&new_addr, &size_addr)) == -1){	    //Verficar se não houve erro a fazer accept
+        perror("accept");
+        exit(-1);
+	}
+
+    fdInsertNode(new_fd, inet_ntoa(new_addr.sin_addr), ntohs(new_addr.sin_port));
+}
+
+// ------------------------------------------------------------------
+// UDP functions ----------------------------------------------------
+// ------------------------------------------------------------------
+
 
 // becomes ready to receive udp messages on sockfd
 int set_udp_server() {
@@ -96,6 +279,13 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     return n;
 }
 
+
+
+// ------------------------------------------------------------------
+// TCP functions ----------------------------------------------------
+// ------------------------------------------------------------------
+
+
 int initTcpServer(){
     struct sockaddr_in local_addr;
     int server_fd;
@@ -124,160 +314,6 @@ int initTcpServer(){
 }
 
 
-/*  forwardHandler
-    multiplexes the functions, depending on the active_fd
-    returns: 0 if the program is to continue
-             1 if the program is to end
-*/
-int forwardHandler(int active_fd){
-    Fd_Node* found_node;
-
-    if(active_fd == fd_vec[LISTEN_FD]){
-        listenHandler();
-    }else if(active_fd == fd_vec[UDP_FD]){
-        udpHandler();
-    }else if(active_fd == fd_vec[STDIN_FD]){
-        return stdinHandler();
-    }else{              //Generic TCP incoming message
-        found_node = fdFindNode(active_fd);
-        tcpHandler(active_fd, found_node);
-    }
-    return 0;   // TODO delete!    
-}
-
-/*  stdinHandler
-    Handles all commands given by the standard input
-    reads command, parses it and validates the parameters
-    returns: 0 if the program is to continue
-             1 if the program is to end
-*/
-int stdinHandler() {
-    char command_line[BUFFER_SIZE];
-    cmd_struct cmd;
-
-    read_command_line(command_line);
-    parse_command(command_line, &cmd);
-    validate_parameters(&cmd); // args_num becomes number of valid parameters!
-    switch(get_command_code(cmd.action)) {
-        case NEW_STDIN:     // new
-            new_stdin(&cmd);
-            break;
-
-        case ENTRY:     // entry
-            entry(&cmd);
-            break;
-
-        case SENTRY:     // sentry
-            sentry(&cmd);
-            break;
-
-        case LEAVE:     // leave
-            leave();
-            break;
-
-        case SHOW:     // show
-            show();
-            break;
-
-        case FIND:     // find
-            find(&cmd);
-            break;
-
-        case EXIT:    // exit
-            return 1;   // changes end flag to 1 when returned
-            break;
-
-        default :   // incorrect command
-            printf("Command not recognized\n");
-            printf("Available commands:\n");
-            printf("\tnew <key>\n\tentry <key> <key_2> <ip> <port>\n");
-            printf("\tsentry <key> <key_2> <ip> <port>\n\tleave\n\tshow\n\tfind <key>\n\texit\n\n\n");
-            break;     
-    }
-    return 0;
-}
-
-/*  udpHandler
-    Handles incoming udp messages
-    validates incoming message (expects: EFND key)
-    initiates the search for the key
-*/
-void udpHandler(void) {
-    char msg_in[UPD_RCV_SIZE], msg_out[UPD_RCV_SIZE];
-    struct sockaddr_in cli_addr;
-    int n;
-    socklen_t len;
-    cmd_struct recv_cmd;
-
-    memset(&cli_addr, 0, sizeof(cli_addr));
-    len = sizeof(cli_addr);
-
-    if ((n = recvfrom(fd_vec[UDP_FD], (char *)msg_in, BUFFER_SIZE, MSG_WAITALL, (struct sockaddr *) &cli_addr, &len)) <= 0) {
-        perror("[udpHandler] ERROR: recvfrom");
-        return;
-    }
-    msg_in[n] = '\0';
-
-    if (parse_command(msg_in, &recv_cmd) <= 1){
-        printf("[UDP] WRONG MESSAGE: %s\n", msg_in);
-        return;
-    }
-    if ((validate_parameters(&recv_cmd) != 2) || strcmp(recv_cmd.action, "EFND") != 0) {
-        printf("[UDP] WRONG MESSAGE: %s\n", msg_in);
-        return;
-    }
-    printf("UDP message was received: %s\n", msg_in);
-
-    // finding where the key is
-    if (serv_vec[SUCC1].key == -1) { // this is the only server on the ring
-        if (serv_vec[SELF].key != -1) { // if server belongs to a ring, send its own details
-            sprintf(msg_out, "EKEY %d %d %s %d", recv_cmd.key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
-            sendto(fd_vec[UDP_FD], (const char *)msg_out, strlen(msg_out), 
-                MSG_CONFIRM, (const struct sockaddr *) &cli_addr,  
-                sizeof(cli_addr));
-        }
-        else {
-            printf("[udpHandler] ERROR: This server does not belong to a ring\n");
-            return;
-        }
-        
-    }
-    
-    // define key
-    /*sprintf(msg_out, "EKEY %d %d %s %d", , ,serv_vec[SELF].ip, serv_vec[SELF].port);
-    sendto(fd_vec[UDP_FD], (const char *)msg_out, strlen(msg_out), 
-        MSG_CONFIRM, (const struct sockaddr *) &cli_addr,  
-            sizeof(cli_addr));*/
-}
-
-void tcpHandler(int sock_fd, Fd_Node* active_node){
-    int cmd_code, first_int, second_int, port;
-    char ip[INET_ADDRSTRLEN], command[PARAM_SIZE];
-    char read_buff[TCP_RCV_SIZE];
-    int read_bytes = 0;
-
-    if((read_bytes = read(sock_fd, read_buff, TCP_RCV_SIZE) )<= 0){
-        printf("Client %d disconnected abruptly\n", sock_fd);
-        //TODO send message to another node that needs to be disconnected
-        fdDeleteFd(sock_fd);
-        close(sock_fd);
-        return;
-    }
-    printf("[TCP] Read:%s\n", read_buff);
-
-    //Interpret and extract the command and its arguments
-    if((cmd_code = parseCommandTcp(active_node, read_buff, read_bytes, command, &first_int, &second_int, ip, &port)) < 0){
-        if(cmd_code == ERR_INCOMP_MSG_TCP){
-            printf("Incomplete TCP message. Storing this partial message\n");
-        }else{
-            printf("Error in TCP message arguments. Message discarded\n");
-        }
-        return;
-    }
-
-    //Forward to the corresponding command handler function
-    forward_tcp_cmd[cmd_code](active_node, first_int, ip, port, second_int);
-}
 
 int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port){
     int num_args = 0;
@@ -330,7 +366,6 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
 
 int getTcpCommandArgs(Fd_Node* active_node, char args[][PARAM_SIZE], int num_args, int *first_int,  int* second_int, char *ip, int *port){
     int cmd_code = ERR_ARGS_TCP;
-    int err = 0;
 
     //Poll cmd and assign arguments
 	if(!strcmp(args[0], "FND")){
@@ -427,24 +462,7 @@ int getTcpCommandArgs(Fd_Node* active_node, char args[][PARAM_SIZE], int num_arg
     }else{
         return 0;
     }
-
-    if(err < 0){
-        return ERR_ARGS_TCP;
-    }
     return cmd_code;
-}
-
-void listenHandler(void){
-    int new_fd;
-    struct sockaddr_in new_addr;
-    socklen_t size_addr = 0;
-
-    if((new_fd = accept(fd_vec[LISTEN_FD], (struct sockaddr*)&new_addr, &size_addr)) == -1){	    //Verficar se não houve erro a fazer accept
-        perror("accept");
-        exit(-1);
-	}
-
-    fdInsertNode(new_fd, inet_ntoa(new_addr.sin_addr), ntohs(new_addr.sin_port));
 }
 
 /*  tcp_client

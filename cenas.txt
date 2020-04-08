@@ -18,7 +18,8 @@ rever funçoes de leitura de strings do tcp com o melo
 
 
 // que acontece se tentar entrar no ring com uma chave pertencente a outro cliente ???
-
+// sscanf cuidado com o tamanho da string do ip!
+// verificar output dos sendtos
 // comando new tem que dar delete aos outros, caso ja exista um anel ? nao posso fazer new estou no anel
 // temos que fazer alguma verficacao no comando sentry? fechar sessao
 // abrir as conexoes de TCP mais tarde, maybe?

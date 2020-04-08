@@ -1,11 +1,13 @@
 #include "logic.h"
 #include "connections.h"
-
+#include "utils.h"
 #include "io.h"
 
 
 extern int fd_vec[NUM_FIXED_FD];
 extern server_info serv_vec[];
+extern int key_flag;
+extern struct sockaddr_in udp_cli_addr;
 
 /*  init_serv_vec
     intializes all of the keys in serv_vec to -1
@@ -34,7 +36,8 @@ void new_stdin (cmd_struct *cmd) {
 }
 
 void entry (cmd_struct *cmd) {
-    char send_message[8], recv_msg[UPD_RCV_SIZE];
+    char send_message[UPD_RCV_SIZE], recv_msg[UPD_RCV_SIZE];
+    char tcp_message[TCP_RCV_SIZE];
     cmd_struct cmd_recv;
 
     if (cmd->args_n < ENTRY_NUM_ARGS+1) {
@@ -42,7 +45,7 @@ void entry (cmd_struct *cmd) {
         return;
     }
     if (serv_vec[SELF].key != -1 || serv_vec[SUCC1].key != -1 || serv_vec[SUCC2].key != -1) {
-        printf("[new_stdin] ERROR: SERVER STILL BELONGS TO RING\n\n");
+        printf("[entry] ERROR: SERVER STILL BELONGS TO RING\n\n");
         return;
     }
     
@@ -61,16 +64,22 @@ void entry (cmd_struct *cmd) {
         printf("[UDP] WRONG MESSAGE: %s\n", recv_msg);
         return;
     }
-    // TODO check values again ?
-    // TODO connect TCP !
-    // key was found successfully in ring
-    serv_vec[SELF].key = cmd->key;
+    if (cmd_recv.key != cmd->key) {
+        printf("[entry] ERROR: RECEIVED KEY DOES NOT MATCH SENT KEY\n");
+        return;
+    }
+    if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(cmd_recv.ip, cmd_recv.port)) == -1)
+        return; // it tcp connection fails
 
+    sprintf(tcp_message, "NEW %d %s %d\n", cmd_recv.key, serv_vec[SELF].ip, serv_vec[SELF].port);
+    if (write_n(fd_vec[SUCCESSOR_FD], tcp_message) == -1)
+        return;
+
+    serv_vec[SELF].key = cmd_recv.key;
+
+    serv_vec[SUCC1].key = cmd_recv.key_2;
     serv_vec[SUCC1].port = cmd_recv.port;
     strcpy(serv_vec[SUCC1].ip, cmd_recv.ip); 
-    serv_vec[SUCC1].key = cmd_recv.key;
-    
-    printf("serv_vec[SELF].key = %d SUCC_KEY %d SUCC_IP %s SUCC_PORT %d \n\n", serv_vec[SELF].key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
 }
 
 /*  sentry
@@ -140,29 +149,21 @@ void find (cmd_struct *cmd) {
         printf("[find] SERVER IS ALONE\n");
         return;
     }
-    // if between self and succ1 the keys go over 15 (example. self.key = 13 and succ1.key = 2) 
-    // and if key is between these nodes
-    if (serv_vec[SELF].key > serv_vec[SUCC1].key ){
-        if(cmd->key > serv_vec[SELF].key || cmd->key <= serv_vec[SUCC1].key){
-            printf("KEY %d %d %s %d\n", cmd->key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
-            return;
-        }
+
+    // if key is in sucessor
+    if(key_in_succ(cmd->key) == 1){
+        printf("KEY %d %d %s %d\n", cmd->key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
+        return;
+    }
+    else {
         // start a search for the key in other nodes
         sprintf(message, "FND %d %d %s %d\n", cmd->key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
         if(write_n(fd_vec[SUCCESSOR_FD], message) == -1)
             return;
+        key_flag = KEY_FLAG_STDIN; // set flag for waiting for the response 
     }
-    // if key is in succ1
-    else if (cmd->key > serv_vec[SELF].key && cmd->key <= serv_vec[SUCC1].key) {
-        printf("KEY %d %d %s %d\n", cmd->key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
-        return;
-    }
-    else {  // start a search for the key in other nodes
-        sprintf(message, "FND %d %d %s %d\n", cmd->key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
-        if(write_n(fd_vec[SUCCESSOR_FD], message) == -1)
-            return;
-    }
-    //TODO
+    printf("[find] searching for the key\n");
+    return;
 }
 
 // ------------------------------------------------------------------
@@ -179,23 +180,14 @@ void tcpFnd(Fd_Node* active_node, int key, char* starting_ip, int starting_port,
         printf("[tcpFnd] SERVER IS ALONE\n");
         return;
     }
-    // if between self and succ1 the keys go over 15 (example. self.key = 13 and succ1.key = 2) 
-    if (serv_vec[SELF].key > serv_vec[SUCC1].key){
-        if (key > serv_vec[SELF].key || key <= serv_vec[SUCC1].key){ // Found the node!
-            if ((temp_fd = init_tcp_client(starting_ip, starting_port)) == -1)
-                return;
-            sprintf(message, "KEY %d %d %s %d\n", key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
-            write_n(temp_fd, message);
-            return;
-        }
-    }
-    else if (key > serv_vec[SELF].key && key <= serv_vec[SUCC1].key) {
+    if(key_in_succ(key) == 1) {
         if ((temp_fd = init_tcp_client(starting_ip, starting_port)) == -1)
             return;
         sprintf(message, "KEY %d %d %s %d\n", key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
         write_n(temp_fd, message);
         return;
     }
+    
     // if key is not in SUCC1, then resend the FND message to SUCC1
     sprintf(message, "FND %d %d %s %d\n", key, starting_sv, starting_ip, starting_port);
     if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
@@ -203,10 +195,30 @@ void tcpFnd(Fd_Node* active_node, int key, char* starting_ip, int starting_port,
 }
 
 void tcpKey(Fd_Node* active_node, int key, char* owner_ip, int owner_port, int owner_of_key_sv){
+    char message[UPD_RCV_SIZE];
+
     printf("RECEIVED KEY %d %d %s %d\n", key, owner_of_key_sv, owner_ip, owner_port);
-
-
+    
+    if (key_flag == KEY_FLAG_EMPTY) {
+        printf("ERROR: RECEIVED KEY %d %d %s %d, BUT WAS NOT EXPECTING IT!\n", key, owner_of_key_sv, owner_ip, owner_port);
+        return;
+    }
+    else if (key_flag == KEY_FLAG_STDIN){   // if key was called by find from stdin, print the result
+        printf("[tcpKey] KEY %d %d %s %d\n", key, owner_of_key_sv, owner_ip, owner_port);
+        key_flag = KEY_FLAG_EMPTY;
+    }
+    else if (key_flag == KEY_FLAG_UDP){     // if key was called by udp, send udp message back to client
+        sprintf(message, "EKEY %d %d %s %d", key, owner_of_key_sv, owner_ip, owner_port);
+        sendto(fd_vec[UDP_FD], (const char *)message, strlen(message), 
+                MSG_CONFIRM, (const struct sockaddr *) &udp_cli_addr,  
+                sizeof(udp_cli_addr));
+        key_flag = KEY_FLAG_EMPTY;
+    }
+    else {
+        printf("ERROR KEY_FLAG = %d IS A NON RECOGNIZED VALUE\n", key_flag);
+    }
 }
+
 
 /*  tcpSuccconf
     predecessor must now be changed
@@ -226,7 +238,7 @@ void tcpSucc(Fd_Node* active_node, int new_succ_sv, char* new_succ_ip, int new_s
 void tcpNew(Fd_Node* active_node, int entry_key_sv, char* entry_ip, int entry_port, int sender_fd){
     char message[TCP_RCV_SIZE];
 
-    printf("NEW %d %s %d\n", entry_key_sv, entry_ip, entry_port);
+    printf("RECEIVED NEW %d %s %d\n", entry_key_sv, entry_ip, entry_port);
 
     // if node is alone in ring
     if (serv_vec[SUCC1].key == -1) { 

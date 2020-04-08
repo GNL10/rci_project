@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "io.h"
+#include "utils.h"
 #include "file_descriptors.h"
 
 void init_serv_vec();

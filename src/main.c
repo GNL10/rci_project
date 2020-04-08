@@ -18,6 +18,10 @@ Fd_Node* fd_stack = NULL;
 
 server_info serv_vec[SERVERS_NUM];
 
+int key_flag = KEY_FLAG_EMPTY; 	// KEY_FLAG_EMPTY if not waiting for a key
+					// KEY_FLAG_STDIN if waiting for a stdin find call
+					// KEY_FLAG_UDP if waiting for a find called by udp
+
 void (*forward_tcp_cmd[5])() = {tcpFnd, tcpKey, tcpSuccconf, tcpSucc, tcpNew};
 
 int main(int argc, char const *argv[]){

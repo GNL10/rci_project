@@ -12,6 +12,7 @@
 
 #include "file_descriptors.h"
 #include "io.h"
+#include "utils.h"
 
 #define UPD_RCV_SIZE 64 
 //      TCP_RCV_SIZE is in file_descriptors.h
@@ -34,6 +35,10 @@
 #define SUCCCONF 2
 #define SUCC 3
 #define NEW 4
+
+#define KEY_FLAG_EMPTY 0
+#define KEY_FLAG_STDIN 1
+#define KEY_FLAG_UDP 2
 
 int set_udp_server();
 int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out);

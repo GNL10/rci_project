@@ -120,7 +120,7 @@ void udpHandler(void) {
         printf("[UDP] WRONG MESSAGE: %s\n", message);
         return;
     }
-    printf("[UDP] Recv: %s", message);
+    printf("[UDP] Recv: %s\n", message);  // EFND key 
 
     if (serv_vec[SUCC1].key == -1) {
         printf("SERVER IS ALONE IN RING, SENDING ITS OWN INFORMATION\n");
@@ -328,7 +328,7 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
             break;
         }
     }
-    printf("[TCP] Read: %s", read_buff);
+    printf("[TCP] Read: %s\n", read_buff);
 
     //If a \n hasn't been found
     if(i != -1){
@@ -360,57 +360,24 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
     }//TODO VERIFICAR O TAMANHO DE CADA ARGUMENTO RECEBIDO
 
     //Interpret the arguments and return the cmd_code or error
-    return getTcpCommandArgs(active_node, args, num_args, first_int, second_int, ip, port);
+    return getTcpCommandArgs(working_buff, args, num_args, first_int, second_int, ip, port);
 
 }
 
-int getTcpCommandArgs(Fd_Node* active_node, char args[][PARAM_SIZE], int num_args, int *first_int,  int* second_int, char *ip, int *port){
+int getTcpCommandArgs(char message[], char args[][PARAM_SIZE], int num_args, int *first_int,  int* second_int, char *ip, int *port){
     int cmd_code = ERR_ARGS_TCP;
+    cmd_struct cmd;
 
     //Poll cmd and assign arguments
 	if(!strcmp(args[0], "FND")){
         if(num_args != FND_NUM_ARGS+1){
             return ERR_ARGS_TCP;
         }
-        *first_int = atoi(args[1]);
-        *second_int = atoi(args[2]);
-        //err = getIpFromArg(args[3], ip);
-        //getPortFromArg(args[4], port);
-        if(validate_ip(args[3]) == 0) { // invalid ip
-            printf("[getTcpCommandArgs] ERROR invalid ip\n");
-            return ERR_ARGS_TCP;
-        }
-        strcpy(ip, args[3]);
-        if (sscanf(args[4], "%d", port) == -1){ // check for sscanf errors if needed
-		    printf("ERROR: SSCANF FOR PORT FAILED!\n");
-		    return ERR_ARGS_TCP;
-	    }
-	    if (validate_port(*port) == 0) {
-		    printf("ERROR: PORT IS NOT VALID!\n");
-		    return ERR_ARGS_TCP;
-	    }
         cmd_code = FND;
     }else if(!strcmp(args[0], "KEY")){
         if(num_args != KEY_NUM_ARGS+1){
             return ERR_ARGS_TCP;
         }
-        *first_int = atoi(args[1]);
-        *second_int = atoi(args[2]);
-        //err = getIpFromArg(args[3], ip);
-        //getPortFromArg(args[4], port);
-        if(validate_ip(args[3]) == 0) { // invalid ip
-            printf("[getTcpCommandArgs] ERROR invalid ip\n");
-            return ERR_ARGS_TCP;
-        }
-        strcpy(ip, args[3]);
-        if (sscanf(args[4], "%d", port) == -1){ // check for sscanf errors if needed
-		    printf("ERROR: SSCANF FOR PORT FAILED!\n");
-		    return ERR_ARGS_TCP;
-	    }
-	    if (validate_port(*port) == 0) {
-		    printf("ERROR: PORT IS NOT VALID!\n");
-		    return ERR_ARGS_TCP;
-	    }
         cmd_code = KEY;
     }else if(!strcmp(args[0], "SUCCCONF")){
         if(num_args != SUCCCONF_NUM_ARGS+1){
@@ -421,46 +388,35 @@ int getTcpCommandArgs(Fd_Node* active_node, char args[][PARAM_SIZE], int num_arg
         if(num_args != SUCC_NUM_ARGS+1){
             return ERR_ARGS_TCP;
         }
-        *first_int = atoi(args[1]);
-        //err = getIpFromArg(args[2], ip);
-        //getPortFromArg(args[3], port);
-        if(validate_ip(args[2]) == 0) { // invalid ip
-            printf("[getTcpCommandArgs] ERROR invalid ip\n");
-            return ERR_ARGS_TCP;
-        }
-        strcpy(ip, args[2]);
-        if (sscanf(args[3], "%d", port) == -1){ // check for sscanf errors if needed
-		    printf("ERROR: SSCANF FOR PORT FAILED!\n");
-		    return ERR_ARGS_TCP;
-	    }
-	    if (validate_port(*port) == 0) {
-		    printf("ERROR: PORT IS NOT VALID!\n");
-		    return ERR_ARGS_TCP;
-	    }
         cmd_code = SUCC;
     }else if(!strcmp(args[0], "NEW")){
         if(num_args != NEW_NUM_ARGS+1){
             return ERR_ARGS_TCP;
         }
-        *first_int = atoi(args[1]); // TODO VALIDATE KEY
-        //err = getIpFromArg(args[2], ip);
-        if(validate_ip(args[2]) == 0) { // invalid ip
-            printf("[getTcpCommandArgs] ERROR invalid ip\n");
-            return ERR_ARGS_TCP;
-        }
-        strcpy(ip, args[2]);
-        if (sscanf(args[3], "%d", port) == -1){ // check for sscanf errors if needed
-		    printf("ERROR: SSCANF FOR PORT FAILED!\n");
-		    return ERR_ARGS_TCP;
-	    }
-	    if (validate_port(*port) == 0) {
-		    printf("ERROR: PORT IS NOT VALID!\n");
-		    return ERR_ARGS_TCP;
-	    }
-        //getPortFromArg(args[3], port);
         cmd_code = NEW;
     }else{
         return 0;
+    }
+    // SUCC and NEW command have a different command order
+    // 2nd parameter is ip instead of key2
+    if (cmd_code != SUCC && cmd_code != NEW) { 
+        parse_command(message, &cmd);
+        validate_parameters(&cmd);
+        *first_int = cmd.key;
+        *second_int = cmd.key_2;
+        strcpy(ip, cmd.ip);
+        *port = cmd.port;
+    }
+    else {  // SUCC and NEW commands
+        if (sscanf(message, "%s %d %s %d", cmd.action, &cmd.key, cmd.ip, &cmd.port) == -1) {
+            printf("ERROR: SSCANF FOR SUCC FAILED\n");
+            return ERR_ARGS_TCP;
+        }
+        cmd.key_2 = 0;  // assign a valid key value, so validate parameters works
+        validate_parameters(&cmd);
+        *first_int = cmd.key;
+        strcpy(ip, cmd.ip);
+        *port = cmd.port;
     }
     return cmd_code;
 }

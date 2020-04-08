@@ -11,7 +11,6 @@ NEW i i.IP i.port\n
 rever funçoes de leitura de strings do tcp com o melo
     -why sscanf == 6 linha  275
 
-
 // melhorar a tcp arguments
 // servers so abrirem dps do new
 // funcoes so funcionarem dps do new

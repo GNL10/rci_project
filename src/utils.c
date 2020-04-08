@@ -24,10 +24,14 @@ int parse_command (char *str, cmd_struct *cmd) {
 	return cmd->args_n;
 }
 
-// validates key, ip and port
-// validates key if n_args >= 2
-// validates ip if n_args >= 4
-// validates port if n_args >= 5
+/*  validate_parameters
+    validates parameters if displayed in the following order command key key2 ip port
+    returns: 1 if first key not valid
+             2 if first key valid and second key not valid
+             3 if both keys valid valid and ip not valid
+             4 if both keys + ip valid and port not valid
+             5 if every parameter is valid
+*/
 int validate_parameters(cmd_struct *cmd) {
 	if(cmd->args_n >= 2) {	// command + key = 2
 		if(!validate_key(cmd->key)) {
@@ -42,10 +46,6 @@ int validate_parameters(cmd_struct *cmd) {
         if(!validate_key(cmd->key_2)){
 			printf("ERROR: KEY_2 IS NOT VALID\n");
         	return (cmd->args_n = 2);
-		}
-		else if(cmd->key == cmd->key_2) {
-			printf("ERROR: KEY IS EQUAL TO KEY_2\n");
-			return (cmd->args_n = 2);
 		}
     }
 	else

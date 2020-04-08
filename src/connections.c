@@ -159,7 +159,6 @@ void tcpHandler(int sock_fd, Fd_Node* active_node){
         close(sock_fd);
         return;
     }
-    printf("[TCP] Read:%s\n", read_buff);
 
     //Interpret and extract the command and its arguments
     if((cmd_code = parseCommandTcp(active_node, read_buff, read_bytes, command, &first_int, &second_int, ip, &port)) < 0){
@@ -329,6 +328,7 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
             break;
         }
     }
+    printf("[TCP] Read: %s", read_buff);
 
     //If a \n hasn't been found
     if(i != -1){

@@ -16,7 +16,7 @@
 int fd_vec[NUM_FIXED_FD] = {0, 0, 0, 0, 0};
 Fd_Node* fd_stack = NULL;
 
-server_info serv_vec[SERVERS_NUM];
+server_info serv_vec[SERVERS_NUM] = {{.key = -1}, {.key = -1}, {.key = -1}};
 
 int key_flag = KEY_FLAG_EMPTY; 	// KEY_FLAG_EMPTY if not waiting for a key
 					// KEY_FLAG_STDIN if waiting for a stdin find call
@@ -37,8 +37,6 @@ int main(int argc, char const *argv[]){
 		printf("ERROR: sigaction failed!");
 		exit(EXIT_FAILURE);
 	}
-
-	init_serv_vec();	// initializes the vector's keys to -1
 
 	read_arguments(argc, (char**) argv);
 

@@ -9,15 +9,6 @@ extern server_info serv_vec[];
 extern int key_flag;
 extern struct sockaddr_in udp_cli_addr;
 
-/*  init_serv_vec
-    intializes all of the keys in serv_vec to -1
-*/
-void init_serv_vec() {
-    for (int i = 0; i < SERVERS_NUM; i++)
-        serv_vec[i].key = -1;
-}
-
-
 /*  new_stdin
     creates a new ring with only the server key
 */
@@ -122,7 +113,9 @@ void leave() {
         return;
     }
     // must disconnect TCP connections
-    init_serv_vec();    // sets all keys to -1
+    serv_vec[SELF].key = -1;
+    serv_vec[SUCC1].key = -1;
+    serv_vec[SUCC2].key = -1;    
 }
 
 /*  show
@@ -146,7 +139,8 @@ void find (cmd_struct *cmd) {
         return;
     }
     if(serv_vec[SUCC1].key == -1) {
-        printf("[find] SERVER IS ALONE\n");
+        printf("[find] SERVER IS ALONE IN RING\n");
+        printf("KEY %d %d %s %d\n", cmd->key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
         return;
     }
 

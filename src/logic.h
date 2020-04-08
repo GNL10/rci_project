@@ -8,7 +8,6 @@
 #include "utils.h"
 #include "file_descriptors.h"
 
-void init_serv_vec();
 void new_stdin (cmd_struct *cmd);
 void entry (cmd_struct *cmd);
 void sentry (cmd_struct *cmd);

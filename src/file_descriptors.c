@@ -7,7 +7,7 @@ extern Fd_Node* fd_stack;
 
 //Inserts a new node in the head of the fd stack
 void fdInsertNode(int fd, char ip[], int port){
-    Fd_Node* new_node = NULL;
+    Fd_Node* new_node;
 
     new_node = (Fd_Node*)malloc(sizeof(Fd_Node));
     if(new_node == NULL){
@@ -22,7 +22,8 @@ void fdInsertNode(int fd, char ip[], int port){
 
     new_node->prev = NULL;
     new_node->next = fd_stack;
-
+    if (fd_stack != NULL)   // if stack is not empty
+        fd_stack->prev = new_node;
     fd_stack = new_node;
 }
 

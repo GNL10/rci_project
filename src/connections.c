@@ -339,8 +339,21 @@ int getTcpCommandArgs(Fd_Node* active_node, char args[][PARAM_SIZE], int num_arg
         }
         *first_int = atoi(args[1]);
         *second_int = atoi(args[2]);
-        err = getIpFromArg(args[3], ip);
-        getPortFromArg(args[4], port);
+        //err = getIpFromArg(args[3], ip);
+        //getPortFromArg(args[4], port);
+        if(validate_ip(args[3]) == 0) { // invalid ip
+            printf("[getTcpCommandArgs] ERROR invalid ip\n");
+            return ERR_ARGS_TCP;
+        }
+        strcpy(ip, args[3]);
+        if (sscanf(args[4], "%d", port) == -1){ // check for sscanf errors if needed
+		    printf("ERROR: SSCANF FOR PORT FAILED!\n");
+		    return ERR_ARGS_TCP;
+	    }
+	    if (validate_port(*port) == 0) {
+		    printf("ERROR: PORT IS NOT VALID!\n");
+		    return ERR_ARGS_TCP;
+	    }
         cmd_code = FND;
     }else if(!strcmp(args[0], "KEY")){
         if(num_args != KEY_NUM_ARGS+1){
@@ -348,8 +361,21 @@ int getTcpCommandArgs(Fd_Node* active_node, char args[][PARAM_SIZE], int num_arg
         }
         *first_int = atoi(args[1]);
         *second_int = atoi(args[2]);
-        err = getIpFromArg(args[3], ip);
-        getPortFromArg(args[4], port);
+        //err = getIpFromArg(args[3], ip);
+        //getPortFromArg(args[4], port);
+        if(validate_ip(args[3]) == 0) { // invalid ip
+            printf("[getTcpCommandArgs] ERROR invalid ip\n");
+            return ERR_ARGS_TCP;
+        }
+        strcpy(ip, args[3]);
+        if (sscanf(args[4], "%d", port) == -1){ // check for sscanf errors if needed
+		    printf("ERROR: SSCANF FOR PORT FAILED!\n");
+		    return ERR_ARGS_TCP;
+	    }
+	    if (validate_port(*port) == 0) {
+		    printf("ERROR: PORT IS NOT VALID!\n");
+		    return ERR_ARGS_TCP;
+	    }
         cmd_code = KEY;
     }else if(!strcmp(args[0], "SUCCCONF")){
         if(num_args != SUCCCONF_NUM_ARGS+1){

@@ -130,9 +130,37 @@ void show() {
     after finding it, prints the key, ip and port of that server
 */
 void find (cmd_struct *cmd) {
+    char message[TCP_RCV_SIZE];
+
     if (cmd->args_n < FIND_NUM_ARGS+1) {
         printf("The find command needs 1 argument\nUsage: find <key>\n\n");
         return;
+    }
+    if(serv_vec[SUCC1].key == -1) {
+        printf("[find] SERVER IS ALONE\n");
+        return;
+    }
+    // if between self and succ1 the keys go over 15 (example. self.key = 13 and succ1.key = 2) 
+    // and if key is between these nodes
+    if (serv_vec[SELF].key > serv_vec[SUCC1].key ){
+        if(cmd->key > serv_vec[SELF].key || cmd->key <= serv_vec[SUCC1].key){
+            printf("KEY %d %d %s %d\n", cmd->key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
+            return;
+        }
+        // start a search for the key in other nodes
+        sprintf(message, "FND %d %d %s %d\n", cmd->key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
+        if(write_n(fd_vec[SUCCESSOR_FD], message) == -1)
+            return;
+    }
+    // if key is in succ1
+    else if (cmd->key > serv_vec[SELF].key && cmd->key <= serv_vec[SUCC1].key) {
+        printf("KEY %d %d %s %d\n", cmd->key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
+        return;
+    }
+    else {  // start a search for the key in other nodes
+        sprintf(message, "FND %d %d %s %d\n", cmd->key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
+        if(write_n(fd_vec[SUCCESSOR_FD], message) == -1)
+            return;
     }
     //TODO
 }
@@ -142,10 +170,41 @@ void find (cmd_struct *cmd) {
 // ------------------------------------------------------------------
 
 void tcpFnd(Fd_Node* active_node, int key, char* starting_ip, int starting_port, int starting_sv){
+    char message[TCP_RCV_SIZE];
+    int temp_fd;
 
+    printf("RECEIVED FND %d %s %d\n", key, starting_ip, starting_port);
+
+    if (serv_vec[SUCC1].key == -1) {
+        printf("[tcpFnd] SERVER IS ALONE\n");
+        return;
+    }
+    // if between self and succ1 the keys go over 15 (example. self.key = 13 and succ1.key = 2) 
+    if (serv_vec[SELF].key > serv_vec[SUCC1].key){
+        if (key > serv_vec[SELF].key || key <= serv_vec[SUCC1].key){ // Found the node!
+            if ((temp_fd = init_tcp_client(starting_ip, starting_port)) == -1)
+                return;
+            sprintf(message, "KEY %d %d %s %d\n", key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
+            write_n(temp_fd, message);
+            return;
+        }
+    }
+    else if (key > serv_vec[SELF].key && key <= serv_vec[SUCC1].key) {
+        if ((temp_fd = init_tcp_client(starting_ip, starting_port)) == -1)
+            return;
+        sprintf(message, "KEY %d %d %s %d\n", key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
+        write_n(temp_fd, message);
+        return;
+    }
+    // if key is not in SUCC1, then resend the FND message to SUCC1
+    sprintf(message, "FND %d %d %s %d\n", key, starting_sv, starting_ip, starting_port);
+    if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
+        return;
 }
 
 void tcpKey(Fd_Node* active_node, int key, char* owner_ip, int owner_port, int owner_of_key_sv){
+    printf("RECEIVED KEY %d %d %s %d\n", key, owner_of_key_sv, owner_ip, owner_port);
+
 
 }
 

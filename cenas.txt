@@ -8,13 +8,8 @@ SUCC succ succ.IP succ.port\n
 
 NEW i i.IP i.port\n
 
-rever funçoes de leitura de strings do tcp com o melo
-    -why sscanf == 6 linha  275
-
-// melhorar a tcp arguments
 // servers so abrirem dps do new
 // funcoes so funcionarem dps do new
-// sscanf cuidado com o tamanho da string do ip!
 
 // fix bind error  nao e necessario !
 // atencao ao tamanho dos buffers a enviar
@@ -23,11 +18,9 @@ rever funçoes de leitura de strings do tcp com o melo
 
 // que acontece se tentar entrar no ring com uma chave pertencente a outro cliente ???
 
-// verificar output dos sendtos
-// comando new tem que dar delete aos outros, caso ja exista um anel ? nao posso fazer new estou no anel
 // temos que fazer alguma verficacao no comando sentry? fechar sessao
 // abrir as conexoes de TCP mais tarde, maybe?
-timeout no select as vezes
+// timeout no select as vezes
 
 //TESTES A FAZER:
 -Um cliente mandar milhões de bytes sem nunca mandar um \n

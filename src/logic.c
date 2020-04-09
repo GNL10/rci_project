@@ -1,7 +1,6 @@
 #include "logic.h"
 #include "connections.h"
 #include "utils.h"
-#include "io.h"
 
 
 extern int fd_vec[NUM_FIXED_FD];
@@ -203,9 +202,12 @@ void tcpKey(Fd_Node* active_node, int key, char* owner_ip, int owner_port, int o
     }
     else if (key_flag == KEY_FLAG_UDP){     // if key was called by udp, send udp message back to client
         sprintf(message, "EKEY %d %d %s %d", key, owner_of_key_sv, owner_ip, owner_port);
-        sendto(fd_vec[UDP_FD], (const char *)message, strlen(message), 
+        if(sendto(fd_vec[UDP_FD], (const char *)message, strlen(message), 
                 MSG_CONFIRM, (const struct sockaddr *) &udp_cli_addr,  
-                sizeof(udp_cli_addr));
+                sizeof(udp_cli_addr)) == -1) {
+            perror("ERROR:sendto");
+            return;
+        }
         key_flag = KEY_FLAG_EMPTY;
     }
     else {

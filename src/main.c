@@ -7,7 +7,6 @@
 #include <sys/socket.h> 
 #include <sys/types.h>
 #include <sys/select.h>
-#include "io.h"
 #include "connections.h"
 #include "logic.h"
 #include "utils.h"
@@ -30,6 +29,7 @@ int main(int argc, char const *argv[]){
 	int active_fd;
 	fd_set rd_set;			//read set
 	struct sigaction action;
+
 
 	memset(&action, 0, sizeof(action));
 	action.sa_handler = SIG_IGN;

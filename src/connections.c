@@ -2,7 +2,6 @@
 #include <netdb.h>
 #include "connections.h"
 #include "logic.h"
-#include "io.h"
 #include "utils.h"
 
 extern int fd_vec[NUM_FIXED_FD];
@@ -125,24 +124,30 @@ void udpHandler(void) {
     if (serv_vec[SUCC1].key == -1) {
         printf("SERVER IS ALONE IN RING, SENDING ITS OWN INFORMATION\n");
         sprintf(message, "EKEY %d %d %s %d", recv_cmd.key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
-        sendto(fd_vec[UDP_FD], (const char *)message, strlen(message), 
+        if (sendto(fd_vec[UDP_FD], (const char *)message, strlen(message), 
                 MSG_CONFIRM, (const struct sockaddr *) &udp_cli_addr,  
-                sizeof(udp_cli_addr));
+                sizeof(udp_cli_addr)) == -1) {
+            perror("ERROR:sendto");
+            return;
+        }
     }
-    if (key_in_succ(recv_cmd.key) == 1) {   // if key is in successor answer right away
+    else if (key_in_succ(recv_cmd.key) == 1) {   // if key is in successor answer right away
         sprintf(message, "EKEY %d %d %s %d", recv_cmd.key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
-        sendto(fd_vec[UDP_FD], (const char *)message, strlen(message), 
+        if (sendto(fd_vec[UDP_FD], (const char *)message, strlen(message), 
                 MSG_CONFIRM, (const struct sockaddr *) &udp_cli_addr,  
-                sizeof(udp_cli_addr));
-        return;
+                sizeof(udp_cli_addr)) == -1) {
+            perror("ERROR:sendto");
+            return;
+        }
     }
-    
-    key_flag = KEY_FLAG_UDP;
-    // key is not in successor... Initiating find process
-    sprintf(message, "FND %d %d %s %d\n", recv_cmd.key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
-    printf("[TCP] Sent: %s\n", message);
-    if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
-        return;
+    else {
+        key_flag = KEY_FLAG_UDP;
+        // key is not in successor... Initiating find process
+        sprintf(message, "FND %d %d %s %d\n", recv_cmd.key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
+        printf("[TCP] Sent: %s\n", message);
+        if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
+            return;
+    }
 }
 
 
@@ -316,7 +321,7 @@ int initTcpServer(){
 
 int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port){
     int num_args = 0;
-    char args[6][PARAM_SIZE];
+    char args[5][PARAM_SIZE];
     char* working_buff;
     int i;
 
@@ -351,45 +356,42 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
     }
 
     //Read the message's arguments and detects if there are more than the maximum allowed arguments
-    if((num_args = sscanf(working_buff, "%s %s %s %s %s %s", args[0], args[1], args[2], args[3], args[4], args[5])) == 6){
-        printf("TCP stream recieved has too many arguments\n");
-        return ERR_ARGS_TCP;
-    }else if(num_args <= 0){
+    if((num_args = sscanf(working_buff, "%"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s", args[0], args[1], args[2], args[3], args[4])) == -1){
         printf("TCP stream recieved is faulty\n");
         return ERR_ARGS_TCP;
     }//TODO VERIFICAR O TAMANHO DE CADA ARGUMENTO RECEBIDO
 
     //Interpret the arguments and return the cmd_code or error
-    return getTcpCommandArgs(working_buff, args, num_args, first_int, second_int, ip, port);
+    return getTcpCommandArgs(working_buff, args[0], num_args, first_int, second_int, ip, port);
 
 }
 
-int getTcpCommandArgs(char message[], char args[][PARAM_SIZE], int num_args, int *first_int,  int* second_int, char *ip, int *port){
+int getTcpCommandArgs(char message[], char action[], int num_args, int *first_int,  int* second_int, char *ip, int *port){
     int cmd_code = ERR_ARGS_TCP;
     cmd_struct cmd;
 
     //Poll cmd and assign arguments
-	if(!strcmp(args[0], "FND")){
+	if(!strcmp(action, "FND")){
         if(num_args != FND_NUM_ARGS+1){
             return ERR_ARGS_TCP;
         }
         cmd_code = FND;
-    }else if(!strcmp(args[0], "KEY")){
+    }else if(!strcmp(action, "KEY")){
         if(num_args != KEY_NUM_ARGS+1){
             return ERR_ARGS_TCP;
         }
         cmd_code = KEY;
-    }else if(!strcmp(args[0], "SUCCCONF")){
+    }else if(!strcmp(action, "SUCCCONF")){
         if(num_args != SUCCCONF_NUM_ARGS+1){
             return ERR_ARGS_TCP;
         }
         cmd_code = SUCCCONF;
-    }else if(!strcmp(args[0], "SUCC")){
+    }else if(!strcmp(action, "SUCC")){
         if(num_args != SUCC_NUM_ARGS+1){
             return ERR_ARGS_TCP;
         }
         cmd_code = SUCC;
-    }else if(!strcmp(args[0], "NEW")){
+    }else if(!strcmp(action, "NEW")){
         if(num_args != NEW_NUM_ARGS+1){
             return ERR_ARGS_TCP;
         }
@@ -408,7 +410,7 @@ int getTcpCommandArgs(char message[], char args[][PARAM_SIZE], int num_args, int
         *port = cmd.port;
     }
     else {  // SUCC and NEW commands
-        if (sscanf(message, "%s %d %s %d", cmd.action, &cmd.key, cmd.ip, &cmd.port) == -1) {
+        if (sscanf(message, "%"PARAM_SIZE_STR"s %d %"INET_ADDRSTRLEN_STR"s %d", cmd.action, &cmd.key, cmd.ip, &cmd.port) == -1) {
             printf("ERROR: SSCANF FOR SUCC FAILED\n");
             return ERR_ARGS_TCP;
         }
@@ -451,7 +453,7 @@ int init_tcp_client(char ip[], int port) {
         printf("[init_tcp_client] ERROR: CONNECT FAILED\n");
         return -1;
     }
-    fdInsertNode(sockfd, "TODO", 5555);
+    fdInsertNode(sockfd, ip, port);
     printf("[init_tcp_client] Client successfully connected\n");
     return sockfd;
 }

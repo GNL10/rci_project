@@ -49,6 +49,8 @@ int stdinHandler() {
     char command_line[BUFFER_SIZE];
     cmd_struct cmd;
 
+    // resets the string, when only enter was pressed, it was using the previously assigned action
+    strcpy(cmd.action, "\0"); 
     read_command_line(command_line);
     parse_command(command_line, &cmd);
     validate_parameters(&cmd); // args_num becomes number of valid parameters!
@@ -94,7 +96,8 @@ int stdinHandler() {
 /*  udpHandler
     Handles incoming udp messages
     validates incoming message (expects: EFND key)
-    initiates the search for the key
+    searches for the key
+    answers back by UDP with key (EKEY key key2 ip port)
 */
 void udpHandler(void) {
     char message[UPD_RCV_SIZE];
@@ -110,7 +113,6 @@ void udpHandler(void) {
         return;
     }
     message[n] = '\0';
-    printf("[UDP] message was received: %s\n", message);
     if (parse_command(message, &recv_cmd) <= 1){
         printf("[UDP] WRONG MESSAGE: %s\n", message);
         return;
@@ -119,10 +121,9 @@ void udpHandler(void) {
         printf("[UDP] WRONG MESSAGE: %s\n", message);
         return;
     }
-    printf("[UDP] Recv: %s\n", message);  // EFND key 
+    printf("[UDP] Read: %s\n", message);  // EFND key 
 
     if (serv_vec[SUCC1].key == -1) {
-        printf("SERVER IS ALONE IN RING, SENDING ITS OWN INFORMATION\n");
         sprintf(message, "EKEY %d %d %s %d", recv_cmd.key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
         if (sendto(fd_vec[UDP_FD], (const char *)message, strlen(message), 
                 MSG_CONFIRM, (const struct sockaddr *) &udp_cli_addr,  
@@ -130,6 +131,7 @@ void udpHandler(void) {
             perror("ERROR:sendto");
             return;
         }
+        printf("[UDP] Sent: %s\n", message);
     }
     else if (key_in_succ(recv_cmd.key) == 1) {   // if key is in successor answer right away
         sprintf(message, "EKEY %d %d %s %d", recv_cmd.key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
@@ -139,18 +141,21 @@ void udpHandler(void) {
             perror("ERROR:sendto");
             return;
         }
+        printf("[UDP] Sent: %s\n", message);
     }
     else {
         key_flag = KEY_FLAG_UDP;
         // key is not in successor... Initiating find process
         sprintf(message, "FND %d %d %s %d\n", recv_cmd.key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
-        printf("[TCP] Sent: %s\n", message);
         if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
             return;
     }
 }
 
-
+/*  tcpHandler
+    reads incoming tcp messages
+    parses the command and forwards to the corresponding tcp function
+*/
 void tcpHandler(int sock_fd, Fd_Node* active_node){
     int cmd_code, first_int, second_int, port;
     char ip[INET_ADDRSTRLEN], command[PARAM_SIZE];
@@ -179,12 +184,15 @@ void tcpHandler(int sock_fd, Fd_Node* active_node){
     forward_tcp_cmd[cmd_code](active_node, first_int, ip, port, second_int);
 }
 
+/*  listenHandler
+    accepts a tcp client and adds it to the fd_stack
+*/
 void listenHandler(void){
     int new_fd;
     struct sockaddr_in new_addr;
     socklen_t size_addr = 0;
 
-    if((new_fd = accept(fd_vec[LISTEN_FD], (struct sockaddr*)&new_addr, &size_addr)) == -1){	    //Verficar se não houve erro a fazer accept
+    if((new_fd = accept(fd_vec[LISTEN_FD], (struct sockaddr*)&new_addr, &size_addr)) == -1){
         perror("accept");
         exit(-1);
 	}
@@ -197,7 +205,10 @@ void listenHandler(void){
 // ------------------------------------------------------------------
 
 
-// becomes ready to receive udp messages on sockfd
+/*  set_udp_server
+    initiates the udp server
+    becomes ready to receive udp messages on sockfd
+*/
 int set_udp_server() {
 	int sockfd; 
     struct sockaddr_in servaddr; 
@@ -227,11 +238,13 @@ int set_udp_server() {
     return sockfd; 
 }  
 
-/*  Sets udp client
+/*  udp_set_send_recv
+    Sets udp client
     Sends msg_in to server
     Receives msg_out from server
     Recv times out after RECV_TIMEOUT seconds
-    returns -1 in case of error
+    returns: n received bytes if successful
+             -1 in case of error
 */
 int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     int sockfd, n;
@@ -278,7 +291,7 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
         return -1;
     }
     msg_out[n] = '\0';
-    printf("[UDP] Recv: %s\n", msg_out);
+    printf("[UDP] Read: %s\n", msg_out);
     close(sockfd);  
     return n;
 }
@@ -289,7 +302,10 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
 // TCP functions ----------------------------------------------------
 // ------------------------------------------------------------------
 
-
+/*  initTcpServer
+    initiates the TCP server
+    returns: server_fd
+*/
 int initTcpServer(){
     struct sockaddr_in local_addr;
     int server_fd;
@@ -313,12 +329,78 @@ int initTcpServer(){
 		perror("listen");
 		exit(-1);
 	}
-
 	return server_fd;
 }
 
+/*  tcp_client
+    connects a tcp client so the server given on the command
+    adds the socket to fd_vec[index]
+    returns: -1 if error occurred
+              sockfd if successful
+*/
+int init_tcp_client(char ip[], int port) {
+    struct addrinfo hints,*res;
+    int sockfd;
+    char port_str[PORT_STR_SIZE];
 
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);    // TCP socket
+    if (sockfd == -1) { 
+        printf("[init_tcp_client] ERROR: SOCKET CREATION FAILED\n"); 
+        return -1;
+    }
+    
+    memset(&hints,0,sizeof hints);
+    hints.ai_family=AF_INET;//IPv4
+    hints.ai_socktype=SOCK_STREAM;//TCP socket
 
+    sprintf(port_str, "%d", port);
+    if (getaddrinfo(ip, port_str, &hints, &res) != 0){
+        printf("[init_tcp_client] ERROR: GETADDRINFO FAILED\n");
+        return -1;
+    }
+    if (connect(sockfd,res->ai_addr,res->ai_addrlen) == -1){
+        printf("[init_tcp_client] ERROR: CONNECT FAILED\n");
+        return -1;
+    }
+    fdInsertNode(sockfd, ip, port);
+    printf("[init_tcp_client] Client successfully connected\n");
+    return sockfd;
+}
+
+/*  write_n
+    writes to socket the input message
+    returns: 0 in case of success
+             -1 in case of error
+*/ 
+int write_n (int fd, char *message) {
+    char *ptr;
+    ssize_t n_left = strlen(message), n_written;
+
+    if (n_left > BUFFER_SIZE) {
+        return -1;
+    }
+    ptr = message;
+
+    while (n_left > 0) {
+        n_written = write(fd, message, n_left);
+        if (n_written == -1) {
+            printf("[write_n] ERROR: WRITE FAILED\n");
+            return -1;
+        }
+        n_left -= n_written;
+        ptr += n_written;
+    }
+    printf("[TCP] Sent: %s", message);
+    return 0;
+}
+
+/*  parseCommandTcp
+    if the message is incomplete appends it into a message vector
+    if complete parses the TCP message received
+    returns: command code if the action correponds to a valid one
+             ERR_INCOMP_MSG_TCP if message is incomplete
+             ERR_ARGS_TCP if there is an error in the TCP arguments             
+*/
 int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port){
     int num_args = 0;
     char args[5][PARAM_SIZE];
@@ -359,13 +441,16 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
     if((num_args = sscanf(working_buff, "%"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s %"PARAM_SIZE_STR"s", args[0], args[1], args[2], args[3], args[4])) == -1){
         printf("TCP stream recieved is faulty\n");
         return ERR_ARGS_TCP;
-    }//TODO VERIFICAR O TAMANHO DE CADA ARGUMENTO RECEBIDO
-
+    }
     //Interpret the arguments and return the cmd_code or error
     return getTcpCommandArgs(working_buff, args[0], num_args, first_int, second_int, ip, port);
-
 }
 
+/*  getTcpCommandArgs
+    finds the command code corresponding to the action
+    returns: command code if successful
+             ERR_ARGS_TCP if there was an error
+*/
 int getTcpCommandArgs(char message[], char action[], int num_args, int *first_int,  int* second_int, char *ip, int *port){
     int cmd_code = ERR_ARGS_TCP;
     cmd_struct cmd;
@@ -421,66 +506,4 @@ int getTcpCommandArgs(char message[], char action[], int num_args, int *first_in
         *port = cmd.port;
     }
     return cmd_code;
-}
-
-/*  tcp_client
-    connects a tcp client so the server given on the command
-    adds the socket to fd_vec[index]
-    returns: -1 if error occurred
-              sockfd if successful
-*/
-int init_tcp_client(char ip[], int port) {
-    struct addrinfo hints,*res;
-    int sockfd;
-    char port_str[PORT_STR_SIZE];
-
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);    // TCP socket
-    if (sockfd == -1) { 
-        printf("[init_tcp_client] ERROR: SOCKET CREATION FAILED\n"); 
-        return -1;
-    }
-    
-    memset(&hints,0,sizeof hints);
-    hints.ai_family=AF_INET;//IPv4
-    hints.ai_socktype=SOCK_STREAM;//TCP socket
-
-    sprintf(port_str, "%d", port);
-    if (getaddrinfo(ip, port_str, &hints, &res) != 0){
-        printf("[init_tcp_client] ERROR: GETADDRINFO FAILED\n");
-        return -1;
-    }
-    if (connect(sockfd,res->ai_addr,res->ai_addrlen) == -1){
-        printf("[init_tcp_client] ERROR: CONNECT FAILED\n");
-        return -1;
-    }
-    fdInsertNode(sockfd, ip, port);
-    printf("[init_tcp_client] Client successfully connected\n");
-    return sockfd;
-}
-
-
-/*  write_n
-    writes to socket the input message
-    returns: 0 in case of success
-             -1 in case of error
-*/ 
-int write_n (int fd, char *message) {
-    char *ptr;
-    ssize_t n_left = strlen(message), n_written;
-
-    if (n_left > BUFFER_SIZE) {
-        return -1;
-    }
-    ptr = message;
-
-    while (n_left > 0) {
-        n_written = write(fd, message, n_left);
-        if (n_written == -1) {
-            printf("[write_n] ERROR: WRITE FAILED\n");
-            return -1;
-        }
-        n_left -= n_written;
-        ptr += n_written;
-    }
-    return 0;
 }

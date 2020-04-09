@@ -12,7 +12,7 @@
 #include "utils.h"
 #include "file_descriptors.h"
 
-int fd_vec[NUM_FIXED_FD] = {0, 0, 0, 0, 0};
+int fd_vec[NUM_FIXED_FD] = {-1, -1, -1, -1, -1};	// -1 so it is different from stin's fd = 0
 Fd_Node* fd_stack = NULL;
 
 server_info serv_vec[SERVERS_NUM] = {{.key = -1}, {.key = -1}, {.key = -1}};
@@ -42,12 +42,8 @@ int main(int argc, char const *argv[]){
 
 	FD_ZERO(&rd_set);									// clear the descriptor set
 
-	fd_vec[LISTEN_FD] = initTcpServer();		//Setup tcp server
-	fd_vec[UDP_FD] = set_udp_server();			//Setup udp server
-
 	//Insert current active sockets into fd stack
-	fdInsertNode(fd_vec[LISTEN_FD], "\0", 0);
-	fdInsertNode(fd_vec[UDP_FD], "\0", 0);
+	fd_vec[STDIN_FD] = 0; // STDIN file descriptor is 0		
 	fdInsertNode(fd_vec[STDIN_FD], "\0", 0);
 	active_fd = fd_vec[STDIN_FD];
 
@@ -56,14 +52,11 @@ int main(int argc, char const *argv[]){
 		FD_ZERO(&rd_set);									// clear the descriptor set
 		fdSetAllSelect(&rd_set);
 		max_numbered_fd = fdMaxFdValue();
-		if(active_fd == fd_vec[STDIN_FD])
-			printf("Enter a command:\n");
 		if(select(max_numbered_fd+1, &rd_set, NULL, NULL, NULL) == -1){
 			perror("select(): ");
 			exit(-1);
 		}
 		active_fd = fdPollFd(&rd_set);
-
 		end_flag = forwardHandler(active_fd);
 	}
 

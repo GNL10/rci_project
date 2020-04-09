@@ -192,10 +192,6 @@ int validate_parameters(cmd_struct *cmd) {
     }
 	else
 		return (cmd->args_n = 4);	
-	if (cmd->port == serv_vec[SELF].port && (strcmp(serv_vec[SELF].ip, cmd->ip) == 0)) { // avoid sending a message to itself
-        printf("ERROR: IP and PORT MATCH THE ONES FROM THIS PROCESS!\n");
-        return (cmd->args_n = 2);
-    }
 	return (cmd->args_n = 5);
 }
 

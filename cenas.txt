@@ -21,6 +21,7 @@ NEW i i.IP i.port\n
 // temos que fazer alguma verficacao no comando sentry? fechar sessao
 // abrir as conexoes de TCP mais tarde, maybe?
 // timeout no select as vezes
+// e se recebermos duas mensagens TCP de uma vez ? 
 
 //TESTES A FAZER:
 -Um cliente mandar milhões de bytes sem nunca mandar um \n

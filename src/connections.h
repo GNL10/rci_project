@@ -39,21 +39,21 @@
 #define KEY_FLAG_STDIN 1
 #define KEY_FLAG_UDP 2
 
-int set_udp_server();
-int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out);
-
-int initTcpServer();
+// Handlers
 int forwardHandler(int active_fd);
-
 int stdinHandler(void);
 void udpHandler(void);
 void tcpHandler(int sock_fd, Fd_Node* active_node);
+void listenHandler(void);
 
+// UDP
+int set_udp_server();
+int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out);
+
+// TCP
+int initTcpServer();
+int init_tcp_client(char ip[], int port);
+int write_n (int fd, char *message);
 int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port);
 int getTcpCommandArgs(char message[], char action[], int num_args, int *first_int,  int* second_int, char *ip, int *port);
-
-void listenHandler(void);
-int init_tcp_client(char ip[], int port);
-
-int write_n (int fd, char *message);
 #endif

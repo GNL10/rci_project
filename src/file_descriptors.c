@@ -62,6 +62,11 @@ void fdDeleteStack(void){
 void fdDeleteFd(int del_fd){
     Fd_Node* aux;
 
+    if(close(del_fd) == -1){
+        perror("Close:");
+        exit(EXIT_FAILURE);
+    }
+    
     for(aux = fd_stack; aux != NULL; aux = aux->next){
         if(aux->fd == del_fd){
             fdDeleteNode(aux);

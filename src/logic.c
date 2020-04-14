@@ -131,6 +131,7 @@ void sentry (cmd_struct *cmd) {
     sets all keys to -1
 */
 void leave() {
+    int i;
     if (serv_vec[SELF].key == -1) {
         printf("This server does not belong to a ring!\n\n");
         return;
@@ -139,7 +140,15 @@ void leave() {
     // must disconnect TCP connections
     serv_vec[SELF].key = -1;
     serv_vec[SUCC1].key = -1;
-    serv_vec[SUCC2].key = -1;
+
+    serv_vec[SUCC2].key = -1;   
+
+    for(i = 0; i < NUM_FIXED_FD; i++){
+        if(fd_vec[i] != -1 && i != STDIN_FD){
+            fdDeleteFd(fd_vec[i]);
+            fd_vec[i] = -1;
+        }
+    }
 }
 
 /*  show

@@ -139,7 +139,7 @@ void leave() {
     // must disconnect TCP connections
     serv_vec[SELF].key = -1;
     serv_vec[SUCC1].key = -1;
-    serv_vec[SUCC2].key = -1;    
+    serv_vec[SUCC2].key = -1;
 }
 
 /*  show

@@ -8,20 +8,27 @@ SUCC succ succ.IP succ.port\n
 
 NEW i i.IP i.port\n
 
-// servers so abrirem dps do new
-// funcoes so funcionarem dps do new
-
-// fix bind error  nao e necessario !
-// atencao ao tamanho dos buffers a enviar
-// ciclo apos leitura de mensagens
 
 
-// que acontece se tentar entrar no ring com uma chave pertencente a outro cliente ???
 
-// temos que fazer alguma verficacao no comando sentry? fechar sessao
-// abrir as conexoes de TCP mais tarde, maybe?
-// timeout no select as vezes
+
+// dar timeout qd nao se recebe key ?? talvez meter timeout, pontos extra
+// subtrair a medida que o gajo vai avancando
+bloquear 1 find, so um de cada vez
+
 // e se recebermos duas mensagens TCP de uma vez ? 
+2 comandos numa mensagem???? considerar!!!
+
+write falhar ? caso a caso
+// verificar casos de saida de erros
+
+repetir o udp? podemos repetir para dar rule out a erros de conexao
+
+// estamos a mandar lixo ?
+
+// ekey no udp, verificar se chaves sao iguais
+fazer close no predecessor qd nova sessao entra
+// saida abruta, atualizar chaves
 
 //TESTES A FAZER:
 -Um cliente mandar milhões de bytes sem nunca mandar um \n

@@ -70,7 +70,7 @@ int main(int argc, char const *argv[]){
 		}
 	}
 
-	//TODO close all sockets
+	fdDeleteStack();
 
 	return 0;
 }

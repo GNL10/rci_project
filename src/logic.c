@@ -8,6 +8,7 @@ extern server_info serv_vec[];
 extern int key_flag;
 extern struct sockaddr_in udp_cli_addr;
 extern struct timeval find_timeout;
+extern Fd_Node* fd_stack;
 
 /*  new_stdin
     creates a new ring with only the server key
@@ -148,6 +149,7 @@ void sentry (cmd_struct *cmd) {
 */
 void leave() {
     int i;
+    Fd_Node* aux;
     if (serv_vec[SELF].key == -1) {
         printf("This server does not belong to a ring!\n\n");
         return;
@@ -156,12 +158,17 @@ void leave() {
     // must disconnect TCP connections
     serv_vec[SELF].key = -1;
     serv_vec[SUCC1].key = -1;
+    serv_vec[SUCC2].key = -1;
 
-    serv_vec[SUCC2].key = -1;   
+    //Delete the fd associated node in stack and close its fd
+    for(aux = fd_stack; aux != NULL; aux = aux->next){
+        if(aux->fd != fd_vec[STDIN_FD]){
+            fdDeleteNode(aux);
+        }
+    }
 
     for(i = 0; i < NUM_FIXED_FD; i++){
-        if(fd_vec[i] != -1 && i != STDIN_FD){
-            fdDeleteFd(fd_vec[i]);
+        if(i != STDIN_FD){
             fd_vec[i] = -1;
         }
     }

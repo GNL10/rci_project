@@ -1,3 +1,5 @@
+#include <unistd.h>
+#include <sys/types.h>
 #include "file_descriptors.h"
 #include "string.h"
 
@@ -30,6 +32,12 @@ void fdInsertNode(int fd, char ip[], int port){
 //Deletes the del_node in fd stack
 void fdDeleteNode(Fd_Node* del_node){
 
+    //Close node's fd
+    if(close(del_node->fd) == -1){
+        perror("Close:");
+        exit(EXIT_FAILURE);
+    }
+
     if(del_node == fd_stack){                   //Se for a head
         if(fd_stack->next != NULL){             //Se for a head e se não for o único elemento da lista
             fd_stack->next->prev = NULL;
@@ -53,6 +61,13 @@ void fdDeleteStack(void){
 
     for(aux = fd_stack; aux != NULL; aux = next){
         next = aux->next;
+        //Close node's fd
+        if(aux->fd != 0){           //close all but stdin
+            if(close(aux->fd) == -1){
+                perror("Close:");
+                exit(EXIT_FAILURE);
+            }
+        }
         free(aux);
     }
     fd_stack = NULL;
@@ -61,11 +76,6 @@ void fdDeleteStack(void){
 //Deletes the node which has del_fd fd
 void fdDeleteFd(int del_fd){
     Fd_Node* aux;
-
-    if(close(del_fd) == -1){
-        perror("Close:");
-        exit(EXIT_FAILURE);
-    }
     
     for(aux = fd_stack; aux != NULL; aux = aux->next){
         if(aux->fd == del_fd){

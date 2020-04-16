@@ -6,7 +6,7 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 
-#define DEBUG_MODE 0 // 1 to enable, 0 to disable
+#define DEBUG_MODE 1 // 1 to enable, 0 to disable
 
 #define SELF 0
 #define SUCC1 1

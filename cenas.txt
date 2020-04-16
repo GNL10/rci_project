@@ -9,23 +9,11 @@ SUCC succ succ.IP succ.port\n
 NEW i i.IP i.port\n
 
 
-
-
-printf!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-debug mode
-
 testar anel grande ficar maior e mais pequenos !!!
-
-// e se recebermos duas mensagens TCP de uma vez ? 
-2 comandos numa mensagem???? considerar!!!
-
-write falhar ? caso a caso
-// verificar casos de saida de erros
-
 EXTRAS FEITOS:
     UDP repete 3 vezes
     TIMEOUT DO FIND KEY
-
+    DEBUG MODE
 
 fazer close no predecessor qd nova sessao entra
 // saida abruta, atualizar chaves

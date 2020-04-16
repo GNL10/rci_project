@@ -160,6 +160,10 @@ void leave() {
     serv_vec[SUCC1].key = -1;
     serv_vec[SUCC2].key = -1;
 
+    // reset the find flags
+    key_flag = KEY_FLAG_EMPTY;
+    find_timeout.tv_sec = 0;
+
     //Delete the fd associated node in stack and close its fd
     for(aux = fd_stack; aux != NULL; aux = aux->next){
         if(aux->fd != fd_vec[STDIN_FD]){
@@ -171,7 +175,13 @@ void leave() {
         if(i != STDIN_FD){
             fd_vec[i] = -1;
         }
+    } 
+    serv_vec[SELF].port += 1;
+    if (validate_port(serv_vec[SELF].port) == 0) {
+        printf("[LEAVE] ERROR: AFTER PORT INCREMENT, PORT IS NO LONGER VALID\n");
+        exit(-1);
     }
+    printf("[update] New port is now %d\n", serv_vec[SELF].port);
 }
 
 /*  show
@@ -334,13 +344,14 @@ void tcpNew(Fd_Node* active_node, int entry_key_sv, char* entry_ip, int entry_po
 
     // if node is alone in ring
     if (serv_vec[SUCC1].key == -1) { 
+                fd_vec[PREDECESSOR_FD] = active_node->fd;
+        if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(entry_ip, entry_port)) == -1)
+            return; //TODO CHECK WHAT TO DO IF THIS FAILS
+        // values only change if the connection was successful
         serv_vec[SUCC1].key = entry_key_sv;
         strcpy(serv_vec[SUCC1].ip, entry_ip);
         serv_vec[SUCC1].port = entry_port;
 
-        fd_vec[PREDECESSOR_FD] = active_node->fd;
-        if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(entry_ip, entry_port)) == -1)
-            return; //TODO CHECK WHAT TO DO IF THIS FAILS
         //send new succ1 SUCCCONF
         sprintf(message, "SUCCCONF\n");
         if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)

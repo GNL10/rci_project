@@ -425,6 +425,7 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int* read_bytes, char
 
     //If a \n hasn't been found
     if(first_eom_idx == -1){
+        *multi_msg_flag = 0;
         active_node->buff_avai_index = appendVector(read_buff, active_node->buff, active_node->buff_avai_index, *read_bytes);        //Store the message in fd buffer
         return ERR_INCOMP_MSG_TCP;
     }else if(first_eom_idx+1 == *read_bytes){  //If there's a \n found, check if it's the last byte recieved

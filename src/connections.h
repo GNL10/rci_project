@@ -54,6 +54,6 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out);
 int initTcpServer();
 int init_tcp_client(char ip[], int port);
 int write_n (int fd, char *message);
-int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port);
+int parseCommandTcp(Fd_Node* active_node, char* read_buff, int* read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port, uint8_t* multi_msg_flag);
 int getTcpCommandArgs(char message[], char action[], int num_args, int *first_int,  int* second_int, char *ip, int *port);
 #endif

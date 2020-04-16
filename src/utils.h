@@ -69,4 +69,6 @@ int validate_parameters(cmd_struct *cmd);
 
 int key_in_succ (int key);
 
+void shiftArray(char* array, int start_idx, int vec_size);
+
 #endif

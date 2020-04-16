@@ -210,3 +210,13 @@ int key_in_succ (int key) {
         return 1;
     return 0;   // if key is not in next node
 }
+
+void shiftArray(char* array, int start_idx, int vec_size){
+	int i;
+
+	for(i = start_idx; i < vec_size; i++){
+		array[i-start_idx] = array[i];
+		array[i] = '0';
+	}
+
+}

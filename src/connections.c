@@ -152,38 +152,6 @@ void udpHandler(void) {
     }
 }
 
-/*  tcpHandler
-    reads incoming tcp messages
-    parses the command and forwards to the corresponding tcp function
-*/
-void tcpHandler(int sock_fd, Fd_Node* active_node){
-    int cmd_code, first_int, second_int, port;
-    char ip[INET_ADDRSTRLEN], command[PARAM_SIZE];
-    char read_buff[TCP_RCV_SIZE];
-    int read_bytes = 0;
-
-    if((read_bytes = read(sock_fd, read_buff, TCP_RCV_SIZE) )<= 0){
-        printf("Client %d disconnected abruptly\n", sock_fd);
-        //TODO send message to another node that needs to be disconnected
-        fdDeleteFd(sock_fd);
-        close(sock_fd);
-        return;
-    }
-
-    //Interpret and extract the command and its arguments
-    if((cmd_code = parseCommandTcp(active_node, read_buff, read_bytes, command, &first_int, &second_int, ip, &port)) < 0){
-        if(cmd_code == ERR_INCOMP_MSG_TCP){
-            printf("Incomplete TCP message. Storing this partial message\n");
-        }else{
-            printf("Error in TCP message arguments. Message discarded\n");
-        }
-        return;
-    }
-
-    //Forward to the corresponding command handler function
-    forward_tcp_cmd[cmd_code](active_node, first_int, ip, port, second_int);
-}
-
 /*  listenHandler
     accepts a tcp client and adds it to the fd_stack
 */
@@ -394,6 +362,43 @@ int write_n (int fd, char *message) {
     return 0;
 }
 
+/*  tcpHandler
+    reads incoming tcp messages
+    parses the command and forwards to the corresponding tcp function
+*/
+void tcpHandler(int sock_fd, Fd_Node* active_node){
+    int cmd_code, first_int, second_int, port;
+    char ip[INET_ADDRSTRLEN], command[PARAM_SIZE];
+    char read_buff[TCP_RCV_SIZE];
+    int read_bytes = 0; 
+    uint8_t multi_msg_flag = 1;         //Starts one in order to enter the first time in while loop
+
+    if((read_bytes = read(sock_fd, read_buff, TCP_RCV_SIZE) )<= 0){
+        printf("Client %d disconnected abruptly\n", sock_fd);
+        //TODO send message to another node that needs to be disconnected
+        fdDeleteFd(sock_fd);
+        return;
+    }
+
+    //Interpret and extract the command and its arguments
+    while(multi_msg_flag){
+        cmd_code = parseCommandTcp(active_node, read_buff, &read_bytes, command, &first_int, &second_int, ip, &port, &multi_msg_flag);
+
+        if(cmd_code == ERR_INCOMP_MSG_TCP){
+            printf("Incomplete TCP message. Storing this partial message\n");
+        }else if(cmd_code == ERR_ARGS_TCP){
+            printf("Error in TCP message arguments. Message discarded\n");
+        }else{                                                                      //A valid complete message was processed
+            //Forward to the corresponding command handler function
+            forward_tcp_cmd[cmd_code](active_node, first_int, ip, port, second_int);
+        }
+    }
+
+    
+
+    
+}
+
 /*  parseCommandTcp
     if the message is incomplete appends it into a message vector
     if complete parses the TCP message received
@@ -401,31 +406,40 @@ int write_n (int fd, char *message) {
              ERR_INCOMP_MSG_TCP if message is incomplete
              ERR_ARGS_TCP if there is an error in the TCP arguments             
 */
-int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port){
+int parseCommandTcp(Fd_Node* active_node, char* read_buff, int* read_bytes, char *command, int *first_int,  int* second_int, char *ip, int *port, uint8_t* multi_msg_flag){
     int num_args = 0;
     char args[5][PARAM_SIZE];
     char* working_buff;
     int i;
+    int first_eom_idx = -1;         //first end of message ('\n') index
 
     //Find the end of message char (\n)
-    for(i = 0; i < TCP_RCV_SIZE && i < read_bytes; i++){
+    for(i = 0; i < TCP_RCV_SIZE && i < *read_bytes; i++){
         if(read_buff[i] == '\n'){
+            first_eom_idx = i;
             read_buff[i] = '\0';                           //sscanf ignores everything after \n
-            i = -1;
             break;
         }
     }
     printf("[TCP] Read: %s\n", read_buff);
 
     //If a \n hasn't been found
-    if(i != -1){
-        active_node->buff_avai_index = appendVector(read_buff, active_node->buff, active_node->buff_avai_index, read_bytes);        //Store the message in fd buffer
+    if(first_eom_idx == -1){
+        active_node->buff_avai_index = appendVector(read_buff, active_node->buff, active_node->buff_avai_index, *read_bytes);        //Store the message in fd buffer
         return ERR_INCOMP_MSG_TCP;
+    }else if(first_eom_idx+1 == *read_bytes){  //If there's a \n found, check if it's the last byte recieved
+        *multi_msg_flag = 0;
+    }else{                                      //There are more bytes to be read after the first \n found
+        //Warn tcpHandler that there's a message (or part of it) still to be processed
+        *multi_msg_flag = 1;
+        //Discard the processed bytes from the read_buff
+        shiftArray(read_buff, first_eom_idx+1, TCP_RCV_SIZE);
+        *read_bytes -= first_eom_idx+1;
     }
 
     //If there's part of a message in the active_node->buffer, append the newly recieved partial message to it
     if(active_node->buff_avai_index){
-        active_node->buff_avai_index = appendVector(read_buff, active_node->buff, active_node->buff_avai_index, read_bytes);        //Store the message in fd buffer
+        active_node->buff_avai_index = appendVector(read_buff, active_node->buff, active_node->buff_avai_index, *read_bytes);        //Store the message in fd buffer
         if(active_node->buff_avai_index == TCP_RCV_SIZE){           //If buffer is full
             active_node->buff_avai_index = 0;
             return ERR_ARGS_TCP;                                     //The message is too big, hence is invalid

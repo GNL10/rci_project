@@ -18,26 +18,25 @@ Fd_Node* fd_stack = NULL;
 server_info serv_vec[SERVERS_NUM] = {{.key = -1}, {.key = -1}, {.key = -1}};
 
 int key_flag = KEY_FLAG_EMPTY; 	// KEY_FLAG_EMPTY if not waiting for a key
-					// KEY_FLAG_STDIN if waiting for a stdin find call
-					// KEY_FLAG_UDP if waiting for a find called by udp
+								// KEY_FLAG_STDIN if waiting for a stdin find call
+								// KEY_FLAG_UDP if waiting for a find called by udp
 
 void (*forward_tcp_cmd[5])() = {tcpFnd, tcpKey, tcpSuccconf, tcpSucc, tcpNew};
+struct timeval find_timeout;
 
 int main(int argc, char const *argv[]){
-	int max_numbered_fd;
+	int max_numbered_fd, res = 0;
 	char end_flag = 0;
 	int active_fd;
 	fd_set rd_set;			//read set
 	struct sigaction action;
-
-
+	
 	memset(&action, 0, sizeof(action));
 	action.sa_handler = SIG_IGN;
 	if (sigaction(SIGPIPE, &action, NULL) == -1) {
 		printf("ERROR: sigaction failed!");
 		exit(EXIT_FAILURE);
 	}
-
 	read_arguments(argc, (char**) argv);
 
 	FD_ZERO(&rd_set);									// clear the descriptor set
@@ -52,12 +51,23 @@ int main(int argc, char const *argv[]){
 		FD_ZERO(&rd_set);									// clear the descriptor set
 		fdSetAllSelect(&rd_set);
 		max_numbered_fd = fdMaxFdValue();
-		if(select(max_numbered_fd+1, &rd_set, NULL, NULL, NULL) == -1){
+		if (find_timeout.tv_sec != 0)
+			res = select(max_numbered_fd+1, &rd_set, NULL, NULL, &find_timeout);
+		else
+			res = select(max_numbered_fd+1, &rd_set, NULL, NULL, NULL);	// no timeout
+		
+		if(res == -1){
 			perror("select(): ");
 			exit(-1);
 		}
-		active_fd = fdPollFd(&rd_set);
-		end_flag = forwardHandler(active_fd);
+		else if (res == 0) {
+			printf("[ERROR] FIND TIMEOUT EXPIRED\n");
+			key_flag = KEY_FLAG_EMPTY;
+		}
+		else {
+			active_fd = fdPollFd(&rd_set);
+			end_flag = forwardHandler(active_fd);
+		}
 	}
 
 	//TODO close all sockets

@@ -7,6 +7,8 @@
 #include "utils.h"
 #include "file_descriptors.h"
 
+#define N_UDP_TRIES 3   // number of times that udp tries to establish connection
+#define FIND_TIMEOUT 15 // number of seconds for the find timeout
 // STDIN FUNCTIONS
 void new_stdin (cmd_struct *cmd);
 void entry (cmd_struct *cmd);

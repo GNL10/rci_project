@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #define NUM_FIXED_FD 5
 

@@ -9,6 +9,7 @@ extern void (*forward_tcp_cmd[5])();
 
 extern server_info serv_vec[];
 extern int key_flag;
+extern struct timeval find_timeout;
 
 struct sockaddr_in udp_cli_addr;    // address of udp client
 
@@ -121,7 +122,7 @@ void udpHandler(void) {
         printf("[UDP] WRONG MESSAGE: %s\n", message);
         return;
     }
-    printf("[UDP] Read: %s\n", message);  // EFND key 
+    if(DEBUG_MODE) printf("[UDP] Read: %s\n", message);  // EFND key 
 
     if (serv_vec[SUCC1].key == -1) {
         sprintf(message, "EKEY %d %d %s %d", recv_cmd.key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
@@ -131,7 +132,7 @@ void udpHandler(void) {
             perror("ERROR:sendto");
             return;
         }
-        printf("[UDP] Sent: %s\n", message);
+        if(DEBUG_MODE) printf("[UDP] Sent: %s\n", message);
     }
     else if (key_in_succ(recv_cmd.key) == 1) {   // if key is in successor answer right away
         sprintf(message, "EKEY %d %d %s %d", recv_cmd.key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
@@ -141,10 +142,15 @@ void udpHandler(void) {
             perror("ERROR:sendto");
             return;
         }
-        printf("[UDP] Sent: %s\n", message);
+        if(DEBUG_MODE) printf("[UDP] Sent: %s\n", message);
     }
     else {
+        if (key_flag != KEY_FLAG_EMPTY) {
+            printf("[udpHandler] FIND CANNOT BE INITIATED, STILL WAITING FOR A DIFFERENT FIND TO FINISH\n");
+            return;
+        }
         key_flag = KEY_FLAG_UDP;
+        find_timeout.tv_sec = FIND_TIMEOUT;
         // key is not in successor... Initiating find process
         sprintf(message, "FND %d %d %s %d\n", recv_cmd.key, serv_vec[SELF].key, serv_vec[SELF].ip, serv_vec[SELF].port);
         if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
@@ -161,12 +167,40 @@ void tcpHandler(int sock_fd, Fd_Node* active_node){
     char ip[INET_ADDRSTRLEN], command[PARAM_SIZE];
     char read_buff[TCP_RCV_SIZE];
     int read_bytes = 0;
+    char message[TCP_RCV_SIZE];
 
     if((read_bytes = read(sock_fd, read_buff, TCP_RCV_SIZE) )<= 0){
-        printf("Client %d disconnected abruptly\n", sock_fd);
-        //TODO send message to another node that needs to be disconnected
+        if(DEBUG_MODE) printf("[tcpHandler] Client %d disconnected abruptly\n", sock_fd);
+        if (sock_fd == fd_vec[SUCCESSOR_FD]) {
+            if(DEBUG_MODE) printf("[tcpHandler] Sucessor disconnected\n");
+            fd_vec[SUCCESSOR_FD] = -1;
+            serv_vec[SUCC1].key = -1;
+            if(serv_vec[SUCC2].key != -1){   // succ2 exists
+                //SEND SUCCCONF TO succ2
+                if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(serv_vec[SUCC2].ip, serv_vec[SUCC2].port)) == -1)
+                    return;
+                sprintf(message, "SUCCCONF\n");
+                if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
+                    return;
+                //if predecessor exists
+                if (fd_vec[PREDECESSOR_FD] != -1) {
+                    //send SUCC <new node info> to predecessor
+                    sprintf(message, "SUCC %d %s %d\n", serv_vec[SUCC2].key, serv_vec[SUCC2].ip, serv_vec[SUCC2].port);
+                    if (write_n(fd_vec[PREDECESSOR_FD], message) == -1)
+                        return;
+                }
+                serv_vec[SUCC1].key = serv_vec[SUCC2].key;
+                strcpy(serv_vec[SUCC1].ip, serv_vec[SUCC2].ip);
+                serv_vec[SUCC1].port = serv_vec[SUCC2].port;
+                serv_vec[SUCC2].key = -1;
+            }
+        }
+        else if (sock_fd == fd_vec[PREDECESSOR_FD]) {
+            if(DEBUG_MODE) printf("Predecessor disconnected\n");
+
+            fd_vec[PREDECESSOR_FD] = -1;
+        }
         fdDeleteFd(sock_fd);
-        close(sock_fd);
         return;
     }
 
@@ -196,7 +230,7 @@ void listenHandler(void){
         perror("accept");
         exit(-1);
 	}
-
+    if(DEBUG_MODE) printf("[listenHandler] Accepted new client %d\n", new_fd);
     fdInsertNode(new_fd, inet_ntoa(new_addr.sin_addr), ntohs(new_addr.sin_port));
 }
 
@@ -234,7 +268,7 @@ int set_udp_server() {
         perror("bind failed"); 
         exit(EXIT_FAILURE); 
     }
-    printf("UDP socket created and binded.\n");
+    if(DEBUG_MODE) printf("[UDP] socket created and binded.\n");
     return sockfd; 
 }  
 
@@ -265,6 +299,8 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     hints.ai_socktype=SOCK_DGRAM;  // UDP socket
     sprintf(port_str, "%d", port);
     if(getaddrinfo(ip, port_str, &hints, &res)) {
+        if(close(sockfd) < 0) 
+            perror("Close:");
         printf("ERROR: getaddrinfo failed\n");
         return -1;
     }
@@ -272,27 +308,31 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     // setting timeout
     if (setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(struct timeval)) == -1) {  
         perror("setsockopt");
-        close(sockfd);
+        if(close(sockfd) < 0) 
+            perror("Close:");
         return -1;
     }
 
     if (sendto(sockfd, (const char *)msg_in, strlen(msg_in), MSG_CONFIRM, 
         (const struct sockaddr *) res->ai_addr, res->ai_addrlen) == -1) {
         perror("ERROR:sendto");
-        close(sockfd);
+        if(close(sockfd) < 0) 
+            perror("Close:");
         return -1;
     }
-    printf("[UDP] Sent: %s\n", msg_in);
+    if(DEBUG_MODE) printf("[UDP] Sent: %s\n", msg_in);
 
     if ( (n = recvfrom(sockfd, (char *)msg_out, UPD_RCV_SIZE, MSG_WAITALL, 
               (struct sockaddr *) &serv_addr, &addr_len)) == -1) { 
         perror("ERROR: recvfrom");
-        close(sockfd);
+        if(close(sockfd) < 0) 
+            perror("Close:");
         return -1;
     }
     msg_out[n] = '\0';
-    printf("[UDP] Read: %s\n", msg_out);
-    close(sockfd);  
+    if(DEBUG_MODE) printf("[UDP] Read: %s\n", msg_out);
+    if(close(sockfd) < 0) 
+        perror("Close:");
     return n;
 }
 
@@ -323,7 +363,7 @@ int initTcpServer(){
 		perror("bind");
 		exit(-1);
 	}
-	printf("TCP socket created and binded.\n");
+	if(DEBUG_MODE) printf("[TCP] socket created and binded.\n");
 
 	if(listen(server_fd, 2) == -1){																//Verificar se não houve erro a fazer listen
 		perror("listen");
@@ -334,7 +374,7 @@ int initTcpServer(){
 
 /*  tcp_client
     connects a tcp client so the server given on the command
-    adds the socket to fd_vec[index]
+    adds the socket to fd_stack
     returns: -1 if error occurred
               sockfd if successful
 */
@@ -363,7 +403,7 @@ int init_tcp_client(char ip[], int port) {
         return -1;
     }
     fdInsertNode(sockfd, ip, port);
-    printf("[init_tcp_client] Client successfully connected\n");
+    if(DEBUG_MODE) printf("[init_tcp_client] Client successfully connected\n");
     return sockfd;
 }
 
@@ -390,7 +430,7 @@ int write_n (int fd, char *message) {
         n_left -= n_written;
         ptr += n_written;
     }
-    printf("[TCP] Sent: %s", message);
+    if(DEBUG_MODE) printf("[TCP] Sent: %s", message);
     return 0;
 }
 
@@ -415,7 +455,7 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int read_bytes, char 
             break;
         }
     }
-    printf("[TCP] Read: %s\n", read_buff);
+    if(DEBUG_MODE) printf("[TCP] Read: %s\n", read_buff);
 
     //If a \n hasn't been found
     if(i != -1){

@@ -11,10 +11,10 @@ NEW i i.IP i.port\n
 
 
 
+printf!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+debug mode
 
-// dar timeout qd nao se recebe key ?? talvez meter timeout, pontos extra
-// subtrair a medida que o gajo vai avancando
-bloquear 1 find, so um de cada vez
+testar anel grande ficar maior e mais pequenos !!!
 
 // e se recebermos duas mensagens TCP de uma vez ? 
 2 comandos numa mensagem???? considerar!!!
@@ -22,11 +22,11 @@ bloquear 1 find, so um de cada vez
 write falhar ? caso a caso
 // verificar casos de saida de erros
 
-repetir o udp? podemos repetir para dar rule out a erros de conexao
+EXTRAS FEITOS:
+    UDP repete 3 vezes
+    TIMEOUT DO FIND KEY
 
-// estamos a mandar lixo ?
 
-// ekey no udp, verificar se chaves sao iguais
 fazer close no predecessor qd nova sessao entra
 // saida abruta, atualizar chaves
 

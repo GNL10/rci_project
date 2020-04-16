@@ -60,7 +60,7 @@ int main(int argc, char const *argv[]){
 		end_flag = forwardHandler(active_fd);
 	}
 
-	//TODO close all sockets
+	fdDeleteStack();
 
 	return 0;
 }

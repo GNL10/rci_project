@@ -61,6 +61,13 @@ void fdDeleteStack(void){
 
     for(aux = fd_stack; aux != NULL; aux = next){
         next = aux->next;
+        //Close node's fd
+        if(aux->fd != 0){           //close all but stdin
+            if(close(aux->fd) == -1){
+                perror("Close:");
+                exit(EXIT_FAILURE);
+            }
+        }
         free(aux);
     }
     fd_stack = NULL;

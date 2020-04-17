@@ -266,7 +266,6 @@ void tcpFnd(Fd_Node* active_node, int key, char* starting_ip, int starting_port,
         sprintf(message, "FND %d %d %s %d\n", key, starting_sv, starting_ip, starting_port);
         if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
             return;
-        find_timeout.tv_sec = FIND_TIMEOUT;
     }
 }
 
@@ -311,7 +310,7 @@ void tcpKey(Fd_Node* active_node, int key, char* owner_ip, int owner_port, int o
     changes predecessor to the active_node->fd
 */
 void tcpSuccconf(Fd_Node* active_node){
-    if (fd_vec[PREDECESSOR_FD] != -1) {
+    if (fd_vec[PREDECESSOR_FD] != -1) { //close predecessor if it exists
         if(close(fd_vec[PREDECESSOR_FD]) < 0) 
             perror("Close:");
     } 
@@ -322,7 +321,7 @@ void tcpSuccconf(Fd_Node* active_node){
     updates the info on the second successor
 */
 void tcpSucc(Fd_Node* active_node, int new_succ_sv, char* new_succ_ip, int new_succ_port){
-    if(new_succ_sv == serv_vec[SELF].key) {
+    if(new_succ_sv == serv_vec[SELF].key) { // happens when ring reduces size and only has 2 nodes
         if(DEBUG_MODE) printf("RECEIVED SUCC WITH OWN INFO\n");
         serv_vec[SUCC2].key = -1;
         return;
@@ -343,11 +342,11 @@ void tcpNew(Fd_Node* active_node, int entry_key_sv, char* entry_ip, int entry_po
     char message[TCP_RCV_SIZE];
 
     // if node is alone in ring
-    if (serv_vec[SUCC1].key == -1) { 
-                fd_vec[PREDECESSOR_FD] = active_node->fd;
-        if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(entry_ip, entry_port)) == -1)
+    if (serv_vec[SUCC1].key == -1) {            
+        if ((active_node->fd = init_tcp_client(entry_ip, entry_port)) == -1)
             return; //TODO CHECK WHAT TO DO IF THIS FAILS
         // values only change if the connection was successful
+        fd_vec[PREDECESSOR_FD] = active_node->fd;
         serv_vec[SUCC1].key = entry_key_sv;
         strcpy(serv_vec[SUCC1].ip, entry_ip);
         serv_vec[SUCC1].port = entry_port;
@@ -363,6 +362,21 @@ void tcpNew(Fd_Node* active_node, int entry_key_sv, char* entry_ip, int entry_po
         //must close curr successor fd
         // connect to new node
         // then change successor to new one and current successor becomes successor2
+        fdDeleteFd(fd_vec[SUCCESSOR_FD]);
+        //init connection with new node as succ1
+        if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(entry_ip, entry_port)) == -1)
+            return;
+        //send new succ1 SUCCCONF
+        sprintf(message, "SUCCCONF\n");
+        if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
+            return;
+        //if predecessor exists
+        if (fd_vec[PREDECESSOR_FD] != -1) {
+            //send SUCC <new node info> to predecessor
+            sprintf(message, "SUCC %d %s %d\n", entry_key_sv, entry_ip, entry_port);
+            if (write_n(fd_vec[PREDECESSOR_FD], message) == -1)
+                return;
+        }
         serv_vec[SUCC2].key = serv_vec[SUCC1].key;
         strcpy(serv_vec[SUCC2].ip, serv_vec[SUCC1].ip);
         serv_vec[SUCC2].port = serv_vec[SUCC1].port;
@@ -370,26 +384,9 @@ void tcpNew(Fd_Node* active_node, int entry_key_sv, char* entry_ip, int entry_po
         serv_vec[SUCC1].key = entry_key_sv;
         strcpy(serv_vec[SUCC1].ip, entry_ip);
         serv_vec[SUCC1].port = entry_port;
-        fd_vec[SUCCESSOR_FD] = active_node->fd;
-
-        //init connection with new node as succ1
-        if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(entry_ip, entry_port)) == -1)
-            return; //TODO CHECK WHAT TO DO IF THIS FAILS
-        //send new succ1 SUCCCONF
-        sprintf(message, "SUCCCONF\n");
-        if (write_n(fd_vec[SUCCESSOR_FD], message) == -1)
-            return; //TODO
-        //if predecessor exists
-        if (fd_vec[PREDECESSOR_FD] != -1) {   //TODO CHECK IF IT EXISTS
-            //send SUCC <new node info> to predecessor
-            sprintf(message, "SUCC %d %s %d\n", entry_key_sv, entry_ip, entry_port);
-            if (write_n(fd_vec[PREDECESSOR_FD], message) == -1)
-                return;
-        }
     }
     else {  // if message was sent by a new node, then new node becomes the predecessor
         if (fd_vec[PREDECESSOR_FD] != -1) { // if a predecessor exists
-            
             sprintf(message, "NEW %d %s %d\n", entry_key_sv, entry_ip, entry_port);
             if (write_n(fd_vec[PREDECESSOR_FD], message) == -1)
                 return;

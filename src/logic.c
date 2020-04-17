@@ -56,7 +56,7 @@ void entry (cmd_struct *cmd) {
     }
     
     sprintf(send_message, "%s %d", "EFND", cmd->key);
-    
+
     for (int i = 0; i < N_UDP_TRIES; i++) {
         // sends and receives message
         if (udp_set_send_recv(cmd->ip, cmd->port, send_message, recv_msg) != -1) {
@@ -80,7 +80,7 @@ void entry (cmd_struct *cmd) {
         return;
     }
     if (cmd_recv.key == cmd_recv.key_2) {
-        printf("[entry ERROR: KEY1 and KEY2 MATCH!\n]");
+        printf("[entry] ERROR: KEY1 and KEY2 MATCH!\n]");
         return;
     }
     if (cmd_recv.key != cmd->key) {
@@ -91,9 +91,8 @@ void entry (cmd_struct *cmd) {
         return; // it tcp connection fails
 
     sprintf(tcp_message, "NEW %d %s %d\n", cmd_recv.key, serv_vec[SELF].ip, serv_vec[SELF].port);
-    if (write_n(fd_vec[SUCCESSOR_FD], tcp_message) == -1) {
+    if (write_n(fd_vec[SUCCESSOR_FD], tcp_message) == -1)
         return;
-    }
 
     // Initiate tcp and udp servers
     fd_vec[LISTEN_FD] = initTcpServer();		//Setup tcp server
@@ -254,10 +253,8 @@ void tcpFnd(Fd_Node* active_node, int key, char* starting_ip, int starting_port,
         if ((temp_fd = init_tcp_client(starting_ip, starting_port)) == -1)
             return;
         sprintf(message, "KEY %d %d %s %d\n", key, serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
-        if (write_n(temp_fd, message) == -1) {
-            fdDeleteFd(temp_fd);
+        if (write_n(temp_fd, message) == -1)
             return;
-        }
         fdDeleteFd(temp_fd);
         return;
     }
@@ -311,8 +308,7 @@ void tcpKey(Fd_Node* active_node, int key, char* owner_ip, int owner_port, int o
 */
 void tcpSuccconf(Fd_Node* active_node){
     if (fd_vec[PREDECESSOR_FD] != -1) { //close predecessor if it exists
-        if(close(fd_vec[PREDECESSOR_FD]) < 0) 
-            perror("Close:");
+        fdDeleteFd(fd_vec[PREDECESSOR_FD]);
     } 
     fd_vec[PREDECESSOR_FD] = active_node->fd;
 }
@@ -322,7 +318,7 @@ void tcpSuccconf(Fd_Node* active_node){
 */
 void tcpSucc(Fd_Node* active_node, int new_succ_sv, char* new_succ_ip, int new_succ_port){
     if(new_succ_sv == serv_vec[SELF].key) { // happens when ring reduces size and only has 2 nodes
-        if(DEBUG_MODE) printf("RECEIVED SUCC WITH OWN INFO\n");
+        if(DEBUG_MODE) printf("[tcpSucc] Received SUCC with own info, only 2 nodes in the ring\n");
         serv_vec[SUCC2].key = -1;
         return;
     }
@@ -342,11 +338,11 @@ void tcpNew(Fd_Node* active_node, int entry_key_sv, char* entry_ip, int entry_po
     char message[TCP_RCV_SIZE];
 
     // if node is alone in ring
-    if (serv_vec[SUCC1].key == -1) {            
-        if ((active_node->fd = init_tcp_client(entry_ip, entry_port)) == -1)
-            return; //TODO CHECK WHAT TO DO IF THIS FAILS
-        // values only change if the connection was successful
+    if (serv_vec[SUCC1].key == -1) {
         fd_vec[PREDECESSOR_FD] = active_node->fd;
+        if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(entry_ip, entry_port)) == -1)
+            return;
+        // values only change if the connection was successful
         serv_vec[SUCC1].key = entry_key_sv;
         strcpy(serv_vec[SUCC1].ip, entry_ip);
         serv_vec[SUCC1].port = entry_port;
@@ -362,7 +358,6 @@ void tcpNew(Fd_Node* active_node, int entry_key_sv, char* entry_ip, int entry_po
         //must close curr successor fd
         // connect to new node
         // then change successor to new one and current successor becomes successor2
-        fdDeleteFd(fd_vec[SUCCESSOR_FD]);
         //init connection with new node as succ1
         if ((fd_vec[SUCCESSOR_FD] = init_tcp_client(entry_ip, entry_port)) == -1)
             return;
@@ -398,7 +393,7 @@ void tcpNew(Fd_Node* active_node, int entry_key_sv, char* entry_ip, int entry_po
             strcpy(serv_vec[SUCC2].ip, entry_ip);
             serv_vec[SUCC2].port = entry_port;
         }
-        //must send predecessor message to update its successor
+        //must send new predecessor message to update its successor
         fd_vec[PREDECESSOR_FD] = active_node->fd;
         if (serv_vec[SUCC1].key != -1){ // if it has a successor, then send new predecessor succ1 info
             sprintf(message, "SUCC %d %s %d\n", serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);

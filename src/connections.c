@@ -197,7 +197,7 @@ void tcpHandler(int sock_fd, Fd_Node* active_node){
             }
         }
         else if (sock_fd == fd_vec[PREDECESSOR_FD]) {
-            if(DEBUG_MODE) printf("Predecessor disconnected\n");
+            if(DEBUG_MODE) printf("[tcpHandler] Predecessor disconnected\n");
             fd_vec[PREDECESSOR_FD] = -1;
         }
         fdDeleteFd(sock_fd);
@@ -300,8 +300,6 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     hints.ai_socktype=SOCK_DGRAM;  // UDP socket
     sprintf(port_str, "%d", port);
     if(getaddrinfo(ip, port_str, &hints, &res)) {
-        if(close(sockfd) < 0) 
-            perror("Close:");
         printf("ERROR: getaddrinfo failed\n");
         return -1;
     }
@@ -309,16 +307,12 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     // setting timeout
     if (setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(char*)&timeout,sizeof(struct timeval)) == -1) {  
         perror("setsockopt");
-        if(close(sockfd) < 0) 
-            perror("Close:");
         return -1;
     }
 
     if (sendto(sockfd, (const char *)msg_in, strlen(msg_in), MSG_CONFIRM, 
         (const struct sockaddr *) res->ai_addr, res->ai_addrlen) == -1) {
         perror("ERROR:sendto");
-        if(close(sockfd) < 0) 
-            perror("Close:");
         return -1;
     }
     if(DEBUG_MODE) printf("[UDP] Sent: %s\n", msg_in);
@@ -326,8 +320,6 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     if ( (n = recvfrom(sockfd, (char *)msg_out, UPD_RCV_SIZE, MSG_WAITALL, 
               (struct sockaddr *) &serv_addr, &addr_len)) == -1) { 
         perror("ERROR: recvfrom");
-        if(close(sockfd) < 0) 
-            perror("Close:");
         return -1;
     }
     msg_out[n] = '\0';
@@ -375,7 +367,7 @@ int initTcpServer(){
 
 /*  tcp_client
     connects a tcp client so the server given on the command
-    adds the socket to fd_stack
+    adds the socket to fd_vec[index]
     returns: -1 if error occurred
               sockfd if successful
 */

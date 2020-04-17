@@ -329,8 +329,6 @@ int udp_set_send_recv (char* ip, int port, char *msg_in, char *msg_out) {
     return n;
 }
 
-
-
 // ------------------------------------------------------------------
 // TCP functions ----------------------------------------------------
 // ------------------------------------------------------------------
@@ -440,6 +438,7 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int* read_bytes, char
     char* working_buff;
     int i;
     int first_eom_idx = -1;         //first end of message ('\n') index
+    int cmd_code;
 
     //Find the end of message char (\n)
     for(i = 0; i < TCP_RCV_SIZE && i < *read_bytes; i++){
@@ -449,21 +448,13 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int* read_bytes, char
             break;
         }
     }
-    if(DEBUG_MODE) printf("[TCP] Read: %s\n", read_buff);
+    if(DEBUG_MODE) printf("[TCP] Read: %s ", read_buff);
 
     //If a \n hasn't been found
     if(first_eom_idx == -1){
         *multi_msg_flag = 0;
         active_node->buff_avai_index = appendVector(read_buff, active_node->buff, active_node->buff_avai_index, *read_bytes);        //Store the message in fd buffer
         return ERR_INCOMP_MSG_TCP;
-    }else if(first_eom_idx+1 == *read_bytes){  //If there's a \n found, check if it's the last byte recieved
-        *multi_msg_flag = 0;
-    }else{                                      //There are more bytes to be read after the first \n found
-        //Warn tcpHandler that there's a message (or part of it) still to be processed
-        *multi_msg_flag = 1;
-        //Discard the processed bytes from the read_buff
-        shiftArray(read_buff, first_eom_idx+1, TCP_RCV_SIZE);
-        *read_bytes -= first_eom_idx+1;
     }
 
     //If there's part of a message in the active_node->buffer, append the newly recieved partial message to it
@@ -485,8 +476,23 @@ int parseCommandTcp(Fd_Node* active_node, char* read_buff, int* read_bytes, char
         printf("TCP stream recieved is faulty\n");
         return ERR_ARGS_TCP;
     }
+
+    if(DEBUG_MODE) printf("num_args: %d\n", num_args);
+
     //Interpret the arguments and return the cmd_code or error
-    return getTcpCommandArgs(working_buff, args[0], num_args, first_int, second_int, ip, port);
+    cmd_code = getTcpCommandArgs(working_buff, args[0], num_args, first_int, second_int, ip, port);
+
+    if(first_eom_idx+1 == *read_bytes){  //If there's a \n found, check if it's the last byte recieved
+        *multi_msg_flag = 0;
+    }else{                                      //There are more bytes to be read after the first \n found
+        //Warn tcpHandler that there's a message (or part of it) still to be processed
+        *multi_msg_flag = 1;
+        //Discard the processed bytes from the read_buff
+        shiftArray(read_buff, first_eom_idx+1, TCP_RCV_SIZE);
+        *read_bytes -= first_eom_idx+1;
+    }
+
+    return cmd_code;
 }
 
 /*  getTcpCommandArgs

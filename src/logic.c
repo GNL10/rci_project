@@ -307,10 +307,19 @@ void tcpKey(Fd_Node* active_node, int key, char* owner_ip, int owner_port, int o
     changes predecessor to the active_node->fd
 */
 void tcpSuccconf(Fd_Node* active_node){
+    char message[TCP_RCV_SIZE];
+
     if (fd_vec[PREDECESSOR_FD] != -1) { //close predecessor if it exists
         fdDeleteFd(fd_vec[PREDECESSOR_FD]);
     } 
     fd_vec[PREDECESSOR_FD] = active_node->fd;
+
+    if (serv_vec[SUCC1].key != -1) {
+        //send SUCC <new node info> to new predecessor
+        sprintf(message, "SUCC %d %s %d\n", serv_vec[SUCC1].key, serv_vec[SUCC1].ip, serv_vec[SUCC1].port);
+        if (write_n(fd_vec[PREDECESSOR_FD], message) == -1)
+            return;
+    }
 }
 
 /*  tcpSucc
